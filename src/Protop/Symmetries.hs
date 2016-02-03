@@ -16,7 +16,7 @@ data SYMM :: * -> * where
 
 instance Show (SYMM a) where
 
-    show (SYMM p) = "(SYMM " ++ show p ++ ")"
+    show (SYMM p) = "~" ++ show p
 
 instance IsProof a => IsProof (SYMM a) where
 

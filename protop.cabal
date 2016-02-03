@@ -26,6 +26,7 @@ library
                      , Protop.Setoids
                      , Protop.Symmetries
                      , Protop.Terminal
+                     , Protop.Transitivities
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
                      , naturals
