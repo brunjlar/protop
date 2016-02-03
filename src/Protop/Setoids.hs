@@ -16,10 +16,12 @@ module Protop.Setoids
     , setFun
     , setPr1
     , setPr2
+    , setProd
     , star
     , setT
     ) where
 
+import Control.Arrow ((&&&))
 import Data.Proxy    (Proxy(..))
 import Data.Typeable (Typeable)
 
@@ -88,6 +90,9 @@ setPr1 = Functoid fst fst
 
 setPr2 :: CProd a b => Functoid (a, b) b
 setPr2 = Functoid snd snd
+
+setProd :: Functoid a b -> Functoid a c -> Functoid a (b, c)
+setProd (Functoid f f') (Functoid g g') = Functoid (f &&& g) (f' &&& g')
 
 star :: Set ()
 star = Set ()
