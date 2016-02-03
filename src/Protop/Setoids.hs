@@ -4,6 +4,7 @@
 {-# Language StandaloneDeriving #-}
 {-# Language GADTs #-}
 {-# Language ScopedTypeVariables #-}
+{-# Language ConstraintKinds #-}
 
 module Protop.Setoids
     ( IsSetoid(..)
@@ -13,6 +14,8 @@ module Protop.Setoids
     , setId
     , setComp
     , setFun
+    , setPr1
+    , setPr2
     ) where
 
 import Data.Proxy    (Proxy(..))
@@ -42,14 +45,6 @@ instance Typeable a => IsSetoid (Set a) where
         | x == y    = Set x
         | otherwise = error "incompatible proofs"
 
-instance (IsSetoid a, IsSetoid b) => IsSetoid (a, b) where
-
-    type Proofs (a, b)             = (Proofs a, Proofs b)
-
-    reflexivity (x, y)             = (reflexivity x, reflexivity y)
-    symmetry _ (p, q)              = (symmetry (Proxy :: Proxy a) p, symmetry (Proxy :: Proxy b) q)
-    transitivity _ (p, q) (p', q') = (transitivity (Proxy :: Proxy a) p p', transitivity (Proxy :: Proxy b) q q')
-
 data Functoid :: * -> * -> * where
     Functoid :: (IsSetoid a, IsSetoid b) => (a -> b) -> (Proofs a -> Proofs b) -> Functoid a b
 
@@ -75,3 +70,19 @@ setComp (Functoid f p) (Functoid g q) = Functoid (f . g) (p . q)
 
 setFun :: forall a b. (Eq a, Typeable a, IsSetoid b) => (a -> b) -> Functoid (Set a) b
 setFun f = Functoid (\(Set x) -> f x) $ \(Set x) -> reflexivity $ f x
+
+type CProd a b = (IsSetoid a, IsSetoid b)
+
+instance CProd a b => IsSetoid (a, b) where
+
+    type Proofs (a, b)             = (Proofs a, Proofs b)
+
+    reflexivity (x, y)             = (reflexivity x, reflexivity y)
+    symmetry _ (p, q)              = (symmetry (Proxy :: Proxy a) p, symmetry (Proxy :: Proxy b) q)
+    transitivity _ (p, q) (p', q') = (transitivity (Proxy :: Proxy a) p p', transitivity (Proxy :: Proxy b) q q')
+
+setPr1 :: CProd a b => Functoid (a, b) a
+setPr1 = Functoid fst fst
+
+setPr2 :: CProd a b => Functoid (a, b) b
+setPr2 = Functoid snd snd
