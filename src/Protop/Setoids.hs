@@ -10,6 +10,9 @@ module Protop.Setoids
     , Set(..)
     , Functoid(..)
     , onPoints, onProofs
+    , setId
+    , setComp
+    , setFun
     ) where
 
 import Data.Proxy (Proxy(..))
@@ -29,16 +32,17 @@ deriving instance Eq a => Eq (Set a)
 instance IsSetoid (Set a) where
     
     type Proofs (Set a) = Set a
-    reflexivity = id
-    symmetry _ = id
-    transitivity _ (Set x) (Set y) | x == y    = Set x
-                                   | otherwise = error "incompatible proofs"
+    reflexivity     = id
+    symmetry _      = id
+    transitivity _ (Set x) (Set y)
+        | x == y    = Set x
+        | otherwise = error "incompatible proofs"
 
 instance (IsSetoid a, IsSetoid b) => IsSetoid (a, b) where
 
-    type Proofs (a, b) = (Proofs a, Proofs b)
-    reflexivity (x, y) = (reflexivity x, reflexivity y)
-    symmetry _ (p, q) = (symmetry (Proxy :: Proxy a) p, symmetry (Proxy :: Proxy b) q)
+    type Proofs (a, b)             = (Proofs a, Proofs b)
+    reflexivity (x, y)             = (reflexivity x, reflexivity y)
+    symmetry _ (p, q)              = (symmetry (Proxy :: Proxy a) p, symmetry (Proxy :: Proxy b) q)
     transitivity _ (p, q) (p', q') = (transitivity (Proxy :: Proxy a) p p', transitivity (Proxy :: Proxy b) q q')
 
 data Functoid :: * -> * -> * where
@@ -53,6 +57,15 @@ onProofs (Functoid _ g) = g
 instance IsSetoid b => IsSetoid (Functoid a b) where
 
     type Proofs (Functoid a b) = a -> Proofs b
-    reflexivity f = reflexivity . (f `onPoints`)
-    symmetry _ p = symmetry (Proxy :: Proxy b) . p
-    transitivity _ p q = \x -> transitivity (Proxy :: Proxy b) (p x) (q x)
+    reflexivity f        = reflexivity . (f `onPoints`)
+    symmetry _ p         = symmetry (Proxy :: Proxy b) . p
+    transitivity _ p q x = transitivity (Proxy :: Proxy b) (p x) (q x)
+
+setId :: IsSetoid a => Functoid a a
+setId = Functoid id id
+
+setComp :: forall a b c. Functoid b c -> Functoid a b -> Functoid a c
+setComp (Functoid f p) (Functoid g q) = Functoid (f . g) (p . q)
+
+setFun :: forall a b. (Eq a, IsSetoid b) => (a -> b) -> Functoid (Set a) b
+setFun f = Functoid (\(Set x) -> f x) $ \(Set x) -> reflexivity $ f x

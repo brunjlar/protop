@@ -15,8 +15,17 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Protop
-  other-modules:       Protop.Setoids
+  other-modules:       Protop.Compositions
+                     , Protop.Identities
+                     , Protop.Morphisms
+                     , Protop.Natural
+                     , Protop.Objects
+                     , Protop.Products
+                     , Protop.Setoids
+                     , Protop.Terminal
+  ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
+                     , naturals
   default-language:    Haskell2010
 
 source-repository head
