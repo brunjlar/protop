@@ -18,7 +18,7 @@ class (Show a, IsSetoid (Domain a)) => IsObject a where
     type Domain a
     proxy :: Proxy a -> a
 
-data Object where
+data Object :: * where
     Object :: IsObject a => a -> Object
 
 instance Show Object where

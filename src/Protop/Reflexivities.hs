@@ -6,6 +6,7 @@ module Protop.Reflexivities
     ( REFL(..)
     ) where
 
+import Data.Proxy       (Proxy(..))
 import Protop.Morphisms
 import Protop.Proofs
 import Protop.Setoids
@@ -22,3 +23,4 @@ instance (Show a, IsMorphism a) => IsProof (REFL a) where
     type Lhs (REFL a) = a
     type Rhs (REFL a) = a
     proof (REFL f) x = reflexivity $ f .$ x
+    proxy'' _        = REFL $ proxy' Proxy

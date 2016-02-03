@@ -51,12 +51,20 @@ infixr 1 .$
 (.$) :: IsMorphism a => a -> Domain (Source a) -> Domain (Target a)
 f .$ x = let Functoid g _ = onDomains f in g x
 
-data MORPHISM where
+data MORPHISM :: * where
     MORPHISM :: IsMorphism a => a -> MORPHISM
 
 instance Show MORPHISM where
 
-    show (MORPHISM f) = "[" ++ show f ++ " :: " ++ show (source f) ++ " -> " ++ show (target f) ++ "]"
+    show (MORPHISM f) = show f
+
+instance Eq MORPHISM where
+
+    (==) = (==) `on` show
+
+instance Ord MORPHISM where
+
+    compare = compare `on` show
 
 apply :: (IsSetoid a, IsSetoid b) => MORPHISM -> a -> Maybe b
 apply (MORPHISM f) x = do
