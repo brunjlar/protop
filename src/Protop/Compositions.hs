@@ -4,6 +4,7 @@
 
 module Protop.Compositions
     ( (:<<)
+    , (<<)
     ) where
 
 import Data.Proxy       (Proxy(..))
@@ -13,6 +14,11 @@ import Protop.Setoids
 infixr 9 :<<
 
 data a :<< b = a :<< b
+
+infixr 9 <<
+
+(<<) :: (IsMorphism a, IsMorphism b, Source a ~ Target b) => a -> b -> a :<< b
+(<<) = (:<<)
 
 instance (Show a, Show b) => Show (a :<< b) where
 

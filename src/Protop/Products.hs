@@ -3,7 +3,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Protop.Products
-    ( (:*)(..)
+    ( (:*)
+    , (.*)
     ) where
 
 import Data.Proxy (Proxy(..))
@@ -12,6 +13,11 @@ import Protop.Objects
 infixl 7 :*
 
 data a :* b = a :* b
+
+infixl 7 .*
+
+(.*) :: (IsObject a, IsObject b) => a -> b -> a :* b
+(.*) = (:*)
 
 instance (Show a, Show b) => Show (a :* b) where
 
