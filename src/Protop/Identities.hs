@@ -1,9 +1,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GADTs #-}
 
 module Protop.Identities
-    ( Id
-    , id'
+    ( Id(..)
     ) where
 
 import Data.Proxy       (Proxy(..))
@@ -11,12 +11,10 @@ import Protop.Objects
 import Protop.Morphisms
 import Protop.Setoids
 
-data Id a = Id a
+data Id :: * -> * where
+    Id :: IsObject a => a -> Id a
 
-id' :: IsObject a => a -> Id a
-id' = Id
-
-instance Show a => Show (Id a) where
+instance Show (Id a) where
 
     show (Id x) = "(id " ++ show x ++ ")"
 

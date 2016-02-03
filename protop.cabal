@@ -21,6 +21,8 @@ library
                      , Protop.Natural
                      , Protop.Objects
                      , Protop.Products
+                     , Protop.Proofs
+                     , Protop.Reflexivities
                      , Protop.Setoids
                      , Protop.Terminal
   ghc-options:         -Wall

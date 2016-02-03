@@ -1,10 +1,10 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GADTs #-}
 
 module Protop.Products
-    ( (:*)
-    , (.*)
+    ( (:*)(..)
     ) where
 
 import Data.Proxy (Proxy(..))
@@ -12,14 +12,12 @@ import Protop.Objects
 
 infixl 7 :*
 
-data a :* b = a :* b
+data (:*) :: * -> * -> * where
+   (:*) :: ( IsObject a
+           , IsObject b
+           ) => a -> b -> a :* b
 
-infixl 7 .*
-
-(.*) :: (IsObject a, IsObject b) => a -> b -> a :* b
-(.*) = (:*)
-
-instance (Show a, Show b) => Show (a :* b) where
+instance Show (a :* b) where
 
     show (x :* y) = "(" ++ show x ++ " * " ++ show y ++ ")"
 

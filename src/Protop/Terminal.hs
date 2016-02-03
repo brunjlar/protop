@@ -1,11 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GADTs #-}
 
 module Protop.Terminal
     ( T(..)
     , star
-    , Terminal
-    , t
+    , Terminal(..)
     ) where
 
 import Data.Proxy       (Proxy(..))
@@ -27,12 +27,10 @@ instance IsObject T where
 star :: Domain T
 star = Set ()
 
-data Terminal a = Terminal a
+data Terminal :: * -> * where
+    Terminal :: IsObject a => a -> Terminal a
 
-t :: IsObject a => a -> Terminal a
-t = Terminal
-
-instance Show a => Show (Terminal a) where
+instance Show (Terminal a) where
 
     show (Terminal x) = "!" ++ show x
 
@@ -41,4 +39,4 @@ instance IsObject a => IsMorphism (Terminal a) where
     type Source (Terminal a) = a
     type Target (Terminal a) = T
     onDomains _ = Functoid (const star) (const star)
-    proxy' _    = t $ proxy Proxy
+    proxy' _    = Terminal $ proxy Proxy
