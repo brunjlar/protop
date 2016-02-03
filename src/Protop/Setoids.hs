@@ -19,7 +19,9 @@ import Data.Proxy    (Proxy(..))
 import Data.Typeable (Typeable)
 
 class (Typeable a, Typeable (Proofs a)) => IsSetoid a where
+
     type Proofs a
+
     reflexivity  :: a -> Proofs a
     symmetry     :: Proxy a -> Proofs a -> Proofs a
     transitivity :: Proxy a -> Proofs a -> Proofs a -> Proofs a
@@ -33,6 +35,7 @@ deriving instance Eq a => Eq (Set a)
 instance Typeable a => IsSetoid (Set a) where
     
     type Proofs (Set a) = Set a
+
     reflexivity     = id
     symmetry _      = id
     transitivity _ (Set x) (Set y)
@@ -42,6 +45,7 @@ instance Typeable a => IsSetoid (Set a) where
 instance (IsSetoid a, IsSetoid b) => IsSetoid (a, b) where
 
     type Proofs (a, b)             = (Proofs a, Proofs b)
+
     reflexivity (x, y)             = (reflexivity x, reflexivity y)
     symmetry _ (p, q)              = (symmetry (Proxy :: Proxy a) p, symmetry (Proxy :: Proxy b) q)
     transitivity _ (p, q) (p', q') = (transitivity (Proxy :: Proxy a) p p', transitivity (Proxy :: Proxy b) q q')
@@ -58,6 +62,7 @@ onProofs (Functoid _ g) = g
 instance (Typeable a, IsSetoid b) => IsSetoid (Functoid a b) where
 
     type Proofs (Functoid a b) = a -> Proofs b
+
     reflexivity f        = reflexivity . (f `onPoints`)
     symmetry _ p         = symmetry (Proxy :: Proxy b) . p
     transitivity _ p q x = transitivity (Proxy :: Proxy b) (p x) (q x)

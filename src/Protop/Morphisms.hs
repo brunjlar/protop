@@ -20,8 +20,10 @@ import Protop.Objects
 import Protop.Setoids
 
 class (Show a, IsObject (Source a), IsObject (Target a)) => IsMorphism a where
+
     type Source a
     type Target a
+
     onDomains :: a -> Functoid (Domain (Source a)) (Domain (Target a))
     proxy'    :: Proxy a -> a
 

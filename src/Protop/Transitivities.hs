@@ -31,5 +31,6 @@ instance ( IsProof a
 
     type Lhs (a :> b) = Lhs a
     type Rhs (a :> b) = Rhs b
+
     proof (p :> q) x = transitivity (Proxy :: Proxy (Domain (PTarget a))) (proof p x) (proof q x)
     proxy'' _ = proxy'' Proxy :> proxy'' Proxy

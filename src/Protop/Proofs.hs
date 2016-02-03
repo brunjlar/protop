@@ -27,6 +27,7 @@ class ( Show a
 
     type Lhs a
     type Rhs a
+
     proof   :: a -> Domain (PSource a) -> Proofs (Domain (PTarget a))
     proxy'' :: Proxy a -> a
 
@@ -64,8 +65,9 @@ instance Show PROOF where
 
 instance Eq PROOF where
 
-    PROOF p == PROOF q = (MORPHISM (lhs p) == MORPHISM (lhs q)) &&
-                         (MORPHISM (rhs p) == MORPHISM (rhs q))
+    PROOF p == PROOF q =
+        (MORPHISM (lhs p) == MORPHISM (lhs q)) &&
+        (MORPHISM (rhs p) == MORPHISM (rhs q))
 
 instance Ord PROOF where
 

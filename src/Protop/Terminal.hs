@@ -22,6 +22,7 @@ instance Show T where
 instance IsObject T where
 
     type Domain T = Set ()
+
     proxy _ = T
 
 star :: Domain T
@@ -38,5 +39,6 @@ instance IsObject a => IsMorphism (Terminal a) where
 
     type Source (Terminal a) = a
     type Target (Terminal a) = T
+
     onDomains _ = Functoid (const star) (const star)
     proxy' _    = Terminal $ proxy Proxy

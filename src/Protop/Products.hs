@@ -24,4 +24,5 @@ instance Show (a :* b) where
 instance (IsObject a, IsObject b) => IsObject (a :* b) where
 
     type Domain (a :* b) = (Domain a, Domain b)
+
     proxy _ = proxy Proxy :* proxy Proxy

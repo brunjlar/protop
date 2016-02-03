@@ -16,6 +16,7 @@ import Protop.Setoids
 class (Show a, IsSetoid (Domain a)) => IsObject a where
 
     type Domain a
+
     proxy :: Proxy a -> a
 
 data Object :: * where
