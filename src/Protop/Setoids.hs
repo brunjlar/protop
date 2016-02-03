@@ -15,9 +15,10 @@ module Protop.Setoids
     , setFun
     ) where
 
-import Data.Proxy (Proxy(..))
+import Data.Proxy    (Proxy(..))
+import Data.Typeable (Typeable)
 
-class IsSetoid a where
+class (Typeable a, Typeable (Proofs a)) => IsSetoid a where
     type Proofs a
     reflexivity  :: a -> Proofs a
     symmetry     :: Proxy a -> Proofs a -> Proofs a
@@ -29,7 +30,7 @@ data Set :: * -> * where
 deriving instance Show a => Show (Set a)
 deriving instance Eq a => Eq (Set a)
 
-instance IsSetoid (Set a) where
+instance Typeable a => IsSetoid (Set a) where
     
     type Proofs (Set a) = Set a
     reflexivity     = id
@@ -54,7 +55,7 @@ onPoints (Functoid f _) = f
 onProofs :: Functoid a b -> Proofs a -> Proofs b
 onProofs (Functoid _ g) = g
 
-instance IsSetoid b => IsSetoid (Functoid a b) where
+instance (Typeable a, IsSetoid b) => IsSetoid (Functoid a b) where
 
     type Proofs (Functoid a b) = a -> Proofs b
     reflexivity f        = reflexivity . (f `onPoints`)
@@ -67,5 +68,5 @@ setId = Functoid id id
 setComp :: forall a b c. Functoid b c -> Functoid a b -> Functoid a c
 setComp (Functoid f p) (Functoid g q) = Functoid (f . g) (p . q)
 
-setFun :: forall a b. (Eq a, IsSetoid b) => (a -> b) -> Functoid (Set a) b
+setFun :: forall a b. (Eq a, Typeable a, IsSetoid b) => (a -> b) -> Functoid (Set a) b
 setFun f = Functoid (\(Set x) -> f x) $ \(Set x) -> reflexivity $ f x

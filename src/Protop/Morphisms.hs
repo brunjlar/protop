@@ -9,10 +9,13 @@ module Protop.Morphisms
     , source
     , target
     , (.$)
+    , MORPHISM(..)
+    , apply
     ) where
 
 import Data.Function  (on)
 import Data.Proxy     (Proxy(..))
+import Data.Typeable  (cast)
 import Protop.Objects
 import Protop.Setoids
 
@@ -47,3 +50,15 @@ infixr 1 .$
 
 (.$) :: IsMorphism a => a -> Domain (Source a) -> Domain (Target a)
 f .$ x = let Functoid g _ = onDomains f in g x
+
+data MORPHISM where
+    MORPHISM :: IsMorphism a => a -> MORPHISM
+
+instance Show MORPHISM where
+
+    show (MORPHISM f) = "[" ++ show f ++ " :: " ++ show (source f) ++ " -> " ++ show (target f) ++ "]"
+
+apply :: (IsSetoid a, IsSetoid b) => MORPHISM -> a -> Maybe b
+apply (MORPHISM f) x = do
+   x' <- cast x
+   cast $ f .$ x' 
