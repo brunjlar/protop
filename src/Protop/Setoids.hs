@@ -16,6 +16,8 @@ module Protop.Setoids
     , setFun
     , setPr1
     , setPr2
+    , star
+    , setT
     ) where
 
 import Data.Proxy    (Proxy(..))
@@ -86,3 +88,9 @@ setPr1 = Functoid fst fst
 
 setPr2 :: CProd a b => Functoid (a, b) b
 setPr2 = Functoid snd snd
+
+star :: Set ()
+star = Set ()
+
+setT :: IsSetoid a => Functoid a (Set ())
+setT = Functoid (const star) (const star)
