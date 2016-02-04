@@ -17,6 +17,7 @@ module Protop.Setoids
     , setPr1
     , setPr2
     , setProd
+    , Star
     , star
     , setT
     ) where
@@ -94,7 +95,9 @@ setPr2 = Functoid snd snd
 setProd :: Functoid a b -> Functoid a c -> Functoid a (b, c)
 setProd (Functoid f f') (Functoid g g') = Functoid (f &&& g) (f' &&& g')
 
-star :: Set ()
+type Star = Set ()
+
+star :: Star
 star = Set ()
 
 setT :: IsSetoid a => Functoid a (Set ())

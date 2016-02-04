@@ -7,6 +7,7 @@ import Protop.Identities     as X
 import Protop.Morphisms      as X
 import Protop.Natural        as X
 import Protop.Objects        as X
+import Protop.Omega          as X
 import Protop.Products       as X
 import Protop.Proofs         as X
 import Protop.Reflexivities  as X
