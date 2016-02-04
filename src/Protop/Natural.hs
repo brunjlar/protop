@@ -7,7 +7,7 @@ module Protop.Natural
     , Succ(..)
     ) where
 
-import Data.Natural
+import Numeric.Natural
 import Protop.Morphisms
 import Protop.Objects
 import Protop.Setoids
