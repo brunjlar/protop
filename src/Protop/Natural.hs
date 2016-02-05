@@ -21,7 +21,7 @@ instance Show N where
 
 instance IsObject N where
 
-    type Domain N = Set Natural
+    type Domain N = Natural
     proxy _ = N
 
 data Zero = Zero
@@ -34,7 +34,7 @@ instance IsMorphism Zero where
 
     type Source Zero = T
     type Target Zero = N
-    onDomains _ = setFun (const $ Set 0)
+    onDomains _ = setZero
     proxy' _    = Zero
 
 data Succ = Succ
@@ -47,5 +47,6 @@ instance IsMorphism Succ where
 
     type Source Succ = N
     type Target Succ = N
-    onDomains _ = setFun $ Set . succ
+
+    onDomains _ = setSucc
     proxy' _    = Succ

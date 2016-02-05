@@ -24,7 +24,7 @@ instance Show T where
 
 instance IsObject T where
 
-    type Domain T = Set ()
+    type Domain T = Star
 
     proxy _ = T
 
