@@ -2,20 +2,28 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Protop.Natural
     ( N(..)
     , Zero(..)
     , Succ(..)
     , Rec(..)
+    , RECZ(..)
+    , RECS(..)
+    , REC(..)
     ) where
 
-import Data.Proxy       (Proxy(..))
-import Numeric.Natural  (Natural)
+import Data.Proxy          (Proxy(..))
+import Numeric.Natural     (Natural)
+import Protop.Compositions
 import Protop.Morphisms
 import Protop.Objects
+import Protop.Proofs
 import Protop.Setoids
+import Protop.Symmetries
 import Protop.Terminal
+import Protop.Transitivities
 
 data N = N
 
@@ -76,3 +84,80 @@ instance CRec z s => IsMorphism (Rec z s) where
 
     onDomains (Rec z s) = setRec (z .$ star) (onDomains s)
     proxy' _ = Rec (proxy' Proxy) (proxy' Proxy)
+
+data RECZ :: * -> * -> * where
+    RECZ :: CRec z s => z -> s -> RECZ z s
+
+instance Show (RECZ z s) where
+
+    show (RECZ z s) = "(RECZ " ++ show z ++ " " ++ show s ++ ")"
+
+instance CRec z s => IsProof (RECZ z s) where
+
+    type Lhs (RECZ z s) = Rec z s :. Zero
+    type Rhs (RECZ z s) = z
+
+    proof (RECZ z _) _ = reflexivity $ z .$ star
+    proxy'' _          = RECZ (proxy' Proxy) (proxy' Proxy)
+
+data RECS :: * -> * -> * where
+    RECS :: CRec z s => z -> s -> RECS z s
+
+instance Show (RECS z s) where
+
+    show (RECS z s) = "(RECN " ++ show z ++ " " ++ show s ++ ")"
+
+instance CRec z s => IsProof (RECS z s) where
+
+    type Lhs (RECS z s) = Rec z s :. Succ 
+    type Rhs (RECS z s) = s :. Rec z s 
+
+    proof (RECS z s) n = reflexivity $ s :. Rec z s .$ n
+    proxy'' _          = RECS (proxy' Proxy) (proxy' Proxy)
+
+type CREC z s f pz ps = ( CRec z s
+                        , IsMorphism f
+                        , IsProof pz
+                        , IsProof ps
+                        , Source s ~ N
+                        , Target f ~ Target z
+                        , Lhs pz ~ (f :. Zero)
+                        , Rhs pz ~ z
+                        , Lhs ps ~ (f :. Succ)
+                        , Rhs ps ~ (s :. f)
+                        )
+
+data REC :: * -> * -> * -> * -> * -> * where
+    REC :: CREC z s f pz ps => z -> s -> f -> pz -> ps -> REC z s f pz ps
+
+instance Show (REC z s f pz ps) where
+
+    show (REC z s f pz ps) = 
+        "(REC " ++ show z ++ " " ++ show s ++ " " ++ show f ++ " " ++ show pz ++ " " ++ show ps ++ ")"
+
+instance CREC z s f pz ps => IsProof (REC z s f pz ps) where
+
+    type Lhs (REC z s f pz ps) = f
+    type Rhs (REC z s f pz ps) = Rec z s
+
+    proof (REC z s _ pz ps) n = loop 0 $ proof (pz :> SYMM (RECZ z s)) star 
+
+      where
+
+        loop :: Natural -> Proofs (Domain (Target z)) -> Proofs (Domain (Target z))
+        loop n' p | n == n'   = p
+                  | otherwise = loop (succ n') p'
+
+          where
+
+            pr :: Proxy (Domain (Target z))
+            pr = Proxy
+
+            p', p1, p2, p3 :: Proofs (Domain (Target z))
+            p' = transitivity pr p1 $ transitivity pr p2 p3
+            
+            p1 = proof ps n'
+            p2 = (onProofs $ onDomains s) p
+            p3 = proof (SYMM $ RECS z s) n' 
+
+    proxy'' _ = REC (proxy' Proxy) (proxy' Proxy) (proxy' Proxy) (proxy'' Proxy) (proxy'' Proxy)
