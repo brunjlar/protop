@@ -19,6 +19,7 @@ module Protop.Setoids
     , setT
     , setZero
     , setSucc
+    , setRec
     ) where
 
 import Control.Arrow   ((&&&))
@@ -107,3 +108,15 @@ setZero = Functoid (const 0) (const 0)
 
 setSucc :: Functoid Natural Natural
 setSucc = Functoid succ succ
+
+setRec :: forall a. IsSetoid a => a -> Functoid a a -> Functoid Natural a
+setRec z s = Functoid r (reflexivity . r)
+
+  where
+
+    r :: Natural -> a
+    r = loop z
+
+    loop :: a -> Natural -> a
+    loop x 0 = x
+    loop x n = loop (s `onPoints` x) $ pred n
