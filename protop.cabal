@@ -16,6 +16,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Protop
   other-modules:       Protop.Compositions
+                     , Protop.Exponentials
                      , Protop.Identities
                      , Protop.Morphisms
                      , Protop.Natural

@@ -20,6 +20,7 @@ module Protop.Setoids
     , setZero
     , setSucc
     , setRec
+    , setCurry
     ) where
 
 import Control.Arrow   ((&&&))
@@ -43,14 +44,6 @@ onPoints (Functoid f _) = f
 
 onProofs :: Functoid a b -> Proofs a -> Proofs b
 onProofs (Functoid _ g) = g
-
-instance (Typeable a, IsSetoid b) => IsSetoid (Functoid a b) where
-
-    type Proofs (Functoid a b) = a -> Proofs b
-
-    reflexivity f        = reflexivity . (f `onPoints`)
-    symmetry _ p         = symmetry (Proxy :: Proxy b) . p
-    transitivity _ p q x = transitivity (Proxy :: Proxy b) (p x) (q x)
 
 setId :: IsSetoid a => Functoid a a
 setId = Functoid id id
@@ -120,3 +113,32 @@ setRec z s = Functoid r (reflexivity . r)
     loop :: a -> Natural -> a
     loop x 0 = x
     loop x n = loop (s `onPoints` x) $ pred n
+
+instance (Typeable a, IsSetoid b) => IsSetoid (Functoid a b) where
+
+    type Proofs (Functoid a b) = a -> Proofs b
+
+    reflexivity f        = reflexivity . (f `onPoints`)
+    symmetry _ p         = symmetry (Proxy :: Proxy b) . p
+    transitivity _ p q x = transitivity (Proxy :: Proxy b) (p x) (q x)
+
+setCurry :: forall x y z. ( IsSetoid x
+                          , IsSetoid y
+                          , IsSetoid z) => Functoid (Functoid (x, y) z) (Functoid x (Functoid y z))
+setCurry = Functoid f g
+
+  where
+
+    f :: Functoid (x, y) z -> Functoid x (Functoid y z)
+    f (Functoid f' f'') = Functoid h' h''
+    
+      where
+
+        h' :: x -> Functoid y z
+        h' x = Functoid (\y -> f' (x, y)) (\yp -> f'' (reflexivity x, yp))
+
+        h'' :: Proofs x -> y -> Proofs z
+        h'' px y = f'' (px, reflexivity y)
+
+    g :: ((x, y) -> Proofs z) -> x -> y -> Proofs z
+    g p x y = p (x, y)
