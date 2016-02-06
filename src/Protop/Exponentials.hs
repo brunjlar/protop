@@ -51,5 +51,5 @@ instance CCurry x y f => IsMorphism (Curry x y f) where
     type Source (Curry x y f) = x
     type Target (Curry x y f) = y :-> Target f
 
-    onDomains (Curry _ _ f) = setCurry `onPoints` (onDomains f)
+    onDomains (Curry _ _ f) = setCurry `onPoints` onDomains f
     proxy' _ = Curry (proxy Proxy) (proxy Proxy) (proxy' Proxy)
