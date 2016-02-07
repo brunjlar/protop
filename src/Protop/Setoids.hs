@@ -21,6 +21,7 @@ module Protop.Setoids
     , setSucc
     , setRec
     , setCurry
+    , setUncurry
     ) where
 
 import Control.Arrow   ((&&&))
@@ -114,31 +115,48 @@ setRec z s = Functoid r (reflexivity . r)
     loop x 0 = x
     loop x n = loop (s `onPoints` x) $ pred n
 
-instance (Typeable a, IsSetoid b) => IsSetoid (Functoid a b) where
+instance (IsSetoid a, IsSetoid b) => IsSetoid (Functoid a b) where
 
-    type Proofs (Functoid a b) = a -> Proofs b
+    type Proofs (Functoid a b) = Proofs a -> Proofs b
 
-    reflexivity f        = reflexivity . (f `onPoints`)
+    reflexivity          = onProofs
     symmetry _ p         = symmetry (Proxy :: Proxy b) . p
     transitivity _ p q x = transitivity (Proxy :: Proxy b) (p x) (q x)
 
-setCurry :: forall x y z. ( IsSetoid x
-                          , IsSetoid y
-                          , IsSetoid z) => Functoid (Functoid (x, y) z) (Functoid x (Functoid y z))
-setCurry = Functoid f g
+type CCurry x y z = ( IsSetoid x
+                    , IsSetoid y
+                    , IsSetoid z
+                    )
+
+setCurry :: forall x y z. CCurry x y z =>
+              Functoid (Functoid (x, y) z) (Functoid x (Functoid y z))
+setCurry = Functoid f curry
 
   where
 
     f :: Functoid (x, y) z -> Functoid x (Functoid y z)
-    f (Functoid f' f'') = Functoid h' h''
-    
-      where
+    f g = Functoid h $ curry $ onProofs g where
 
-        h' :: x -> Functoid y z
-        h' x = Functoid (\y -> f' (x, y)) (\yp -> f'' (reflexivity x, yp))
+        h :: x -> Functoid y z
+        h x = Functoid h' h'' where
 
-        h'' :: Proofs x -> y -> Proofs z
-        h'' px y = f'' (px, reflexivity y)
+            h' :: y -> z
+            h' y = g `onPoints` (x, y)
 
-    g :: ((x, y) -> Proofs z) -> x -> y -> Proofs z
-    g p x y = p (x, y)
+            h'' :: Proofs y -> Proofs z
+            h'' py = g `onProofs` (reflexivity x, py)
+
+setUncurry :: forall x y z. CCurry x y z =>
+                Functoid (Functoid x (Functoid y z)) (Functoid (x, y) z)
+setUncurry = Functoid f uncurry
+
+  where
+
+    f :: Functoid x (Functoid y z) -> Functoid (x, y) z
+    f g = Functoid h h' where
+
+        h :: (x, y) -> z
+        h = uncurry $ onPoints . onPoints g
+
+        h' :: (Proofs x, Proofs y) -> Proofs z
+        h' = uncurry $ onProofs g
