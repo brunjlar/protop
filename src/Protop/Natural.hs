@@ -12,13 +12,19 @@ module Protop.Natural
     , RECZ(..)
     , RECS(..)
     , REC(..)
+    , Add
+    , add
+    , Mul
+    , mul
     ) where
 
-import Data.Proxy          (Proxy(..))
-import Numeric.Natural     (Natural)
+import Data.Proxy            (Proxy(..))
+import Numeric.Natural       (Natural)
 import Protop.Compositions
+import Protop.Exponentials
 import Protop.Morphisms
 import Protop.Objects
+import Protop.Products
 import Protop.Proofs
 import Protop.Setoids
 import Protop.Symmetries
@@ -161,3 +167,23 @@ instance CREC z s f pz ps => IsProof (REC z s f pz ps) where
             p3 = proof (SYMM $ RECS z s) n' 
 
     proxy'' _ = REC (proxy' Proxy) (proxy' Proxy) (proxy' Proxy) (proxy'' Proxy) (proxy'' Proxy)
+
+type Add = Uncurry
+            (Rec
+                (Curry T N (Pr2 T N))
+                (Curry (N :-> N) N (Succ :. Eval N N)))
+            N
+            N
+                
+add :: Morphism (N :* N) N
+add = Morphism $ proxy' (Proxy :: Proxy Add)
+
+type Mul = Uncurry
+            (Rec
+                (Curry T N (Zero :. Pr1 T N))
+                (Curry (N :-> N) N (Add :. (Eval N N :&&& Pr2 (N :-> N) N))))
+            N
+            N
+
+mul :: Morphism (N :* N) N
+mul = Morphism $ proxy' (Proxy :: Proxy Mul)

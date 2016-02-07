@@ -6,9 +6,11 @@
 module Protop.Morphisms
     ( IsMorphism(..)
     , Morphism(..)
+    , onDomains'
     , source
     , target
     , (.$)
+    , (.$.)
     , MORPHISM(..)
     , apply
     ) where
@@ -42,6 +44,9 @@ instance Ord (Morphism a b) where
 
     compare = compare `on` show
 
+onDomains' :: Morphism a b -> Functoid (Domain a) (Domain b)
+onDomains' (Morphism f) = onDomains f
+
 source :: forall a. IsMorphism a => a -> Source a
 source _ = proxy (Proxy :: Proxy (Source a))
 
@@ -52,6 +57,11 @@ infixr 1 .$
 
 (.$) :: IsMorphism a => a -> Domain (Source a) -> Domain (Target a)
 f .$ x = let Functoid g _ = onDomains f in g x
+
+infixr 1 .$.
+
+(.$.) :: Morphism a b -> Domain a -> Domain b
+(Morphism f) .$. x = f .$ x
 
 data MORPHISM :: * where
     MORPHISM :: IsMorphism a => a -> MORPHISM
