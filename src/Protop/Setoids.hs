@@ -4,6 +4,7 @@
 {-# Language GADTs #-}
 {-# Language ScopedTypeVariables #-}
 {-# Language ConstraintKinds #-}
+{-# Language StandaloneDeriving #-}
 
 module Protop.Setoids
     ( IsSetoid(..)
@@ -22,6 +23,8 @@ module Protop.Setoids
     , setRec
     , setCurry
     , setUncurry
+    , SetEql(..)
+    , setInj
     ) where
 
 import Control.Arrow   ((&&&))
@@ -160,3 +163,25 @@ setUncurry = Functoid f uncurry
 
         h' :: (Proofs x, Proofs y) -> Proofs z
         h' = uncurry $ onProofs g
+
+data SetEql :: * -> * -> * where
+    SetEql :: (IsSetoid x, IsSetoid y) => x -> Proofs y -> SetEql x y
+
+deriving instance ( IsSetoid x
+                  , IsSetoid y
+                  , Show x
+                  , Show (Proofs y)
+                  ) => Show (SetEql x y)
+
+instance (IsSetoid x, IsSetoid y) => IsSetoid (SetEql x y) where
+
+    type Proofs (SetEql x y) = Proofs x
+
+    reflexivity (SetEql x _) = reflexivity x
+    symmetry _               = symmetry (Proxy :: Proxy x)
+    transitivity _           = transitivity (Proxy :: Proxy x)
+
+setInj :: (IsSetoid x, IsSetoid y) => Functoid (SetEql x y) x
+setInj = Functoid f f' where
+    f (SetEql x _) = x
+    f' = id

@@ -9,6 +9,7 @@ module Protop.Proofs
     , PTarget
     , lhs
     , rhs
+    , Proof(..)
     , PROOF(..)
     ) where
 
