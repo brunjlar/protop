@@ -10,8 +10,7 @@ module Protop.Equalizers
     , Inj(..)
     , INJ(..)
     , Eql(..)
-    , MONO(..)
-    , monoInj
+    , MONOINJ(..)
     ) where
 
 import Data.Proxy            (Proxy(..))
@@ -73,6 +72,20 @@ instance (CEql f g) => IsProof (INJ f g) where
     proof _ (SetEql _ px) = px
     proxy'' _             = INJ (proxy' Proxy) (proxy' Proxy)
 
+data MONOINJ :: * -> * -> * where
+    MONOINJ :: CEql f g => f -> g -> MONOINJ f g
+
+instance Show (MONOINJ f g) where
+    show (MONOINJ f g) = "(MONOINJ " ++ show f ++ " " ++ show g ++ ")"
+
+instance CEql f g => IsProof (MONOINJ f g) where
+
+    type Lhs (MONOINJ f g) = MonoTest1 (Inj f g)
+    type Rhs (MONOINJ f g) = MonoTest2 (Inj f g)
+
+    proof (MONOINJ f g) = proof (MONOTEST $ Inj f g) 
+    proxy'' _ = MONOINJ (proxy' Proxy) (proxy' Proxy)
+
 type CEql' f g h p = ( CEql f g
                      , IsMorphism h
                      , IsProof p
@@ -101,38 +114,3 @@ instance CEql' f g h p => IsMorphism (Eql f g h p) where
                    (proxy' Proxy)
                    (proxy' Proxy)
                    (proxy'' Proxy)
-
-type CMONO f g t t' p = ( CEql f g
-                        , IsMorphism t
-                        , IsMorphism t'
-                        , IsProof p
-                        , Source t ~ Source t'
-                        , Target t ~ Target t'
-                        , Target t ~ (f :== g)
-                        , Lhs p ~ (Inj f g :. t)
-                        , Rhs p ~ (Inj f g :. t')
-                        )
-
-data MONO :: * -> * -> * -> * -> * -> * where
-    MONO :: CMONO f g t t' p => f -> g -> t -> t' -> p -> MONO f g t t' p
-
-instance Show (MONO f g t t' p) where
-    show (MONO f g t t' p) =
-        "(MONO " ++ show f ++ " " ++ show g ++ " " ++ show t ++ " " ++
-        show t' ++ " " ++ show p ++ ")"
-
-instance CMONO f g t t' p => IsProof (MONO f g t t' p) where
-
-    type Lhs (MONO f g t t' p) = t
-    type Rhs (MONO f g t t' p) = t'
-
-    proof (MONO _ _ _ _ p) = proof p
-    proxy'' _              = MONO
-                                (proxy' Proxy)
-                                (proxy' Proxy)
-                                (proxy' Proxy)
-                                (proxy' Proxy)
-                                (proxy'' Proxy)
-
-monoInj :: forall f g. CEql f g => f -> g -> Mono (Inj f g)
-monoInj f g = Mono (Inj f g) $ \t t' (Proof p) -> Proof $ MONO f g t t' p

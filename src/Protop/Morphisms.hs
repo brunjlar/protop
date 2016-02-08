@@ -17,11 +17,15 @@ module Protop.Morphisms
 
 import Data.Function  (on)
 import Data.Proxy     (Proxy(..))
-import Data.Typeable  (cast)
+import Data.Typeable  (Typeable, cast)
 import Protop.Objects
 import Protop.Setoids
 
-class (Show a, IsObject (Source a), IsObject (Target a)) => IsMorphism a where
+class ( Show a 
+      , Typeable a
+      , IsObject (Source a)
+      , IsObject (Target a)
+      ) => IsMorphism a where
 
     type Source a
     type Target a

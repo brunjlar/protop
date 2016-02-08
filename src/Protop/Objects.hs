@@ -11,20 +11,24 @@ module Protop.Objects
 
 import Data.Function  (on)
 import Data.Proxy     (Proxy(..))
+import Data.Typeable  (Typeable)
 import Protop.Setoids
 
-class (Show a, IsSetoid (Domain a)) => IsObject a where
+class ( Show x
+      , Typeable x
+      , IsSetoid (Domain x)
+      ) => IsObject x where
 
-    type Domain a
+    type Domain x
 
-    proxy :: Proxy a -> a
+    proxy :: Proxy x -> x
 
 data Object :: * where
-    Object :: IsObject a => a -> Object
+    Object :: IsObject x => x -> Object
 
 instance Show Object where
 
-    show (Object p) = show p
+    show (Object x) = show x
 
 instance Eq Object where
 

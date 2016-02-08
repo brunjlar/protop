@@ -15,50 +15,52 @@ module Protop.Proofs
 
 import Data.Monoid      ((<>))
 import Data.Proxy       (Proxy(..))
+import Data.Typeable    (Typeable)
 import Protop.Morphisms
 import Protop.Objects
 import Protop.Setoids
 
-class ( Show a
-      , IsMorphism (Lhs a)
-      , IsMorphism (Rhs a)
-      , Source (Lhs a) ~ Source (Rhs a)
-      , Target (Lhs a) ~ Target (Rhs a)
-      ) => IsProof a where
+class ( Show p
+      , Typeable p
+      , IsMorphism (Lhs p)
+      , IsMorphism (Rhs p)
+      , Source (Lhs p) ~ Source (Rhs p)
+      , Target (Lhs p) ~ Target (Rhs p)
+      ) => IsProof p where
 
-    type Lhs a
-    type Rhs a
+    type Lhs p
+    type Rhs p
 
-    proof   :: a -> Domain (PSource a) -> Proofs (Domain (PTarget a))
-    proxy'' :: Proxy a -> a
+    proof   :: p -> Domain (PSource p) -> Proofs (Domain (PTarget p))
+    proxy'' :: Proxy p -> p
 
-type PSource a = Source (Lhs a)
+type PSource p = Source (Lhs p)
 
-type PTarget a = Target (Lhs a)
+type PTarget p = Target (Lhs p)
 
-lhs :: forall a. IsProof a => a -> Lhs a
-lhs _ = proxy' (Proxy :: Proxy (Lhs a)) 
+lhs :: forall p. IsProof p => p -> Lhs p
+lhs _ = proxy' (Proxy :: Proxy (Lhs p)) 
 
-rhs :: forall a. IsProof a => a -> Rhs a
-rhs _ = proxy' (Proxy :: Proxy (Rhs a)) 
+rhs :: forall p. IsProof p => p -> Rhs p
+rhs _ = proxy' (Proxy :: Proxy (Rhs p)) 
 
 data Proof :: * -> * -> * where
-    Proof :: IsProof a => a -> Proof (Lhs a) (Rhs a)
+    Proof :: IsProof p => p -> Proof (Lhs p) (Rhs p)
 
-instance Show (Proof a b) where
+instance Show (Proof f g) where
     
     show (Proof p) = show p
 
-instance Eq (Proof a b) where
+instance Eq (Proof f g) where
 
     (==) = const $ const True
 
-instance Ord (Proof a b) where
+instance Ord (Proof f g) where
 
     compare = const $ const EQ
 
 data PROOF :: * where
-    PROOF :: IsProof a => a -> PROOF
+    PROOF :: IsProof p => p -> PROOF
 
 instance Show PROOF where
 
