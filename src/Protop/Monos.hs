@@ -15,10 +15,12 @@ module Protop.Monos
     , MONOAPPLY(..)
     , monoId
     , monoComp
+    , monoT
+    , eqT'
     ) where
 
 import Data.Proxy            (Proxy(..))
-import Data.Typeable         (Typeable, (:~:)(..), eqT)
+import Data.Typeable         (Typeable, typeRep, (:~:)(..), eqT)
 import Protop.Compositions
 import Protop.Identities
 import Protop.Objects
@@ -26,6 +28,7 @@ import Protop.Morphisms
 import Protop.Proofs
 import Protop.Setoids
 import Protop.Symmetries
+import Protop.Terminal
 import Protop.Transitivities
 
 type CMonoTest f t t' p = ( IsMorphism f
@@ -52,8 +55,12 @@ data MProof :: * -> * where
                 f -> t -> t' -> p ->
                 Proxy (Dom t) -> Proofs (Dom t) -> MProof f
 
-eqT' :: (Typeable a, Typeable b) => a -> b -> Maybe (a :~: b)
-eqT' _ _ = eqT
+eqT' :: forall a b. (Typeable a, Typeable b) => a -> b -> a :~: b
+eqT' _ _ = case eqT of
+    Just r  -> r
+    Nothing -> error $ "incompatible types " ++
+        show (typeRep (Proxy :: Proxy a)) ++ " and " ++
+        show (typeRep (Proxy :: Proxy b))
 
 instance IsMorphism f => IsSetoid (MPoint f) where
 
@@ -64,9 +71,8 @@ instance IsMorphism f => IsSetoid (MPoint f) where
     transitivity _ (MProof f t t' p  r px)
                    (MProof _ s s' p' _ qx) =
         case (eqT' t s, eqT' t' s', eqT' p p') of
-           (Just Refl, Just Refl, Just Refl) ->
+           (Refl, Refl, Refl) ->
                 MProof f t t' p r $ transitivity r px qx
-           _                                 -> error "incompatible proofs"
           
 data MonoTest :: * -> * where
 
@@ -97,13 +103,9 @@ instance IsMorphism f => IsMorphism (MonoTest1 f) where
 
     onDomains (MonoTest1 f) = Functoid g g' where
         g (MPoint f' t _ _ _ x) =
-            case eqT' f f' of
-                Just Refl -> t .$ x
-                Nothing   -> error "incompatible point"
+            case eqT' f f' of Refl -> t .$ x
         g' (MProof f' t _ _ _ px) =
-            case eqT' f f' of
-                Just Refl -> onProofs (onDomains t) px
-                Nothing   -> error "incompatible proof"
+            case eqT' f f' of Refl -> onProofs (onDomains t) px
 
     proxy' _ = MonoTest1 (proxy' Proxy)
 
@@ -122,13 +124,9 @@ instance IsMorphism f => IsMorphism (MonoTest2 f) where
 
     onDomains (MonoTest2 f) = Functoid g g' where
         g (MPoint f' _ t' _ _ x) =
-            case eqT' f f' of
-                Just Refl -> t' .$ x
-                Nothing   -> error "incompatible point"
+            case eqT' f f' of Refl -> t' .$ x
         g' (MProof f' _ t' _ _ px) =
-            case eqT' f f' of
-                Just Refl -> onProofs (onDomains t') px
-                Nothing   -> error "incompatible proof"
+            case eqT' f f' of Refl -> onProofs (onDomains t') px
 
     proxy' _ = MonoTest2 (proxy' Proxy)
 
@@ -146,9 +144,7 @@ instance IsMorphism f => IsProof (MONOTEST f) where
     type Rhs (MONOTEST f) = f :. MonoTest2 f 
 
     proof (MONOTEST f) (MPoint f' _ _ p _ x) =
-        case eqT' f f' of
-            Just Refl -> proof p x
-            Nothing   -> error "incompatible point"
+        case eqT' f f' of Refl -> proof p x
 
     proxy'' _ = MONOTEST (proxy' Proxy)
 
@@ -207,3 +203,8 @@ monoComp f g p = Proof $
     ASS f g (MonoTest1 g) :>
     (f :.| MONOTEST g) :>
     SYMM (ASS f g (MonoTest2 g))
+
+monoT :: ( IsMorphism f
+         , Source f ~ T
+         ) => f -> Proof (MonoTest1 f) (MonoTest2 f)
+monoT f = Proof $ TERMINAL (MonoTest1 f) :> SYMM (TERMINAL (MonoTest2 f))
