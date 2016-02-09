@@ -7,7 +7,6 @@ module Protop.Symmetries
     ) where
 
 import Data.Proxy     (Proxy(..))
-import Protop.Objects
 import Protop.Proofs
 import Protop.Setoids
 
@@ -23,5 +22,5 @@ instance IsProof a => IsProof (SYMM a) where
     type Lhs (SYMM a) = Rhs a
     type Rhs (SYMM a) = Lhs a
 
-    proof (SYMM p) x = symmetry (Proxy :: Proxy (Domain (PTarget a))) $ proof p x
+    proof (SYMM p) x = symmetry (Proxy :: Proxy (DTARGET a)) $ proof p x
     proxy'' _        = SYMM $ proxy'' Proxy

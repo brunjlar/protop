@@ -18,3 +18,4 @@ import Protop.Setoids        as X
 import Protop.Symmetries     as X
 import Protop.Transitivities as X
 import Protop.Terminal       as X
+import Protop.Utility        as X

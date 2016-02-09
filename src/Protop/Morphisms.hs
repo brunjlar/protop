@@ -5,6 +5,10 @@
 
 module Protop.Morphisms
     ( IsMorphism(..)
+    , DSource
+    , DTarget
+    , PSource
+    , PTarget
     , Morphism(..)
     , onDomains'
     , source
@@ -30,8 +34,13 @@ class ( Show a
     type Source a
     type Target a
 
-    onDomains :: a -> Functoid (Domain (Source a)) (Domain (Target a))
+    onDomains :: a -> Functoid (DSource a) (DTarget a)
     proxy'    :: Proxy a -> a
+
+type DSource f = Domain (Source f)
+type DTarget f = Domain (Target f)
+type PSource f = Proofs (DSource f)
+type PTarget f = Proofs (DTarget f)
 
 data Morphism :: * -> * -> * where
     Morphism :: IsMorphism a => a -> Morphism (Source a) (Target a)
@@ -59,7 +68,7 @@ target _ = proxy (Proxy :: Proxy (Target a))
 
 infixr 1 .$
 
-(.$) :: IsMorphism a => a -> Domain (Source a) -> Domain (Target a)
+(.$) :: IsMorphism a => a -> DSource a -> DTarget a
 f .$ x = let Functoid g _ = onDomains f in g x
 
 infixr 1 .$.

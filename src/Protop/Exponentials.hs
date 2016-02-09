@@ -58,8 +58,10 @@ instance CCurry x y f => IsMorphism (Curry x y f) where
     type Source (Curry x y f) = x
     type Target (Curry x y f) = y :-> Target f
 
-    onDomains (Curry _ _ f) = setCurry `onPoints` onDomains f
-    proxy' _                = Curry (proxy Proxy) (proxy Proxy) (proxy' Proxy)
+    onDomains (Curry _ _ f) = setCurry $ onDomains f
+    proxy' _                = Curry (proxy Proxy)
+                                    (proxy Proxy)
+                                    (proxy' Proxy)
 
 type CUncurry f y z = ( IsMorphism f
                       , IsObject y
@@ -79,7 +81,7 @@ instance CUncurry f y z => IsMorphism (Uncurry f y z) where
     type Source (Uncurry f y z) = Source f :* y
     type Target (Uncurry f y z) = z
 
-    onDomains (Uncurry f _ _) = setUncurry `onPoints` onDomains f
+    onDomains (Uncurry f _ _) = setUncurry $ onDomains f
     proxy' _ = Uncurry (proxy' Proxy) (proxy Proxy) (proxy Proxy)
 
 data UNCC :: * -> * -> * -> * where
@@ -109,7 +111,11 @@ instance CUncurry f y z => IsProof (CUNC f y z) where
     type Lhs (CUNC f y z) = Curry (Source f) y (Uncurry f y z)
     type Rhs (CUNC f y z) = f
 
-    proof (CUNC f _ _) x = onProofs $ f .$ x
+    proof (CUNC f y z) x = 
+        ( Curry (source f) y (Uncurry f y z) .$ x
+        , f                                  .$ x
+        , onProofs $ f .$ x
+        )
     proxy'' _ = CUNC (proxy' Proxy) (proxy Proxy) (proxy Proxy)
 
 type Eval x y = Uncurry (Id (x :-> y)) x y

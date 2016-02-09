@@ -150,16 +150,16 @@ instance CREC z s f pz ps => IsProof (REC z s f pz ps) where
 
       where
 
-        loop :: Natural -> Proofs (Domain (Target z)) -> Proofs (Domain (Target z))
+        loop :: Natural -> Proofs (DTarget z) -> PTarget z
         loop n' p | n == n'   = p
                   | otherwise = loop (succ n') p'
 
           where
 
-            pr :: Proxy (Domain (Target z))
+            pr :: Proxy (DTarget z)
             pr = Proxy
 
-            p', p1, p2, p3 :: Proofs (Domain (Target z))
+            p', p1, p2, p3 :: PTarget z
             p' = transitivity pr p1 $ transitivity pr p2 p3
             
             p1 = proof ps n'

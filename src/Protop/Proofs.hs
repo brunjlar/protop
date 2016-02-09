@@ -5,8 +5,12 @@
 
 module Protop.Proofs
     ( IsProof(..)
-    , PSource
-    , PTarget
+    , SOURCE
+    , TARGET
+    , DSOURCE
+    , DTARGET
+    , PSOURCE
+    , PTARGET
     , lhs
     , rhs
     , Proof(..)
@@ -31,12 +35,15 @@ class ( Show p
     type Lhs p
     type Rhs p
 
-    proof   :: p -> Domain (PSource p) -> Proofs (Domain (PTarget p))
+    proof   :: p -> Domain (SOURCE p) -> Proofs (Domain (TARGET p))
     proxy'' :: Proxy p -> p
 
-type PSource p = Source (Lhs p)
-
-type PTarget p = Target (Lhs p)
+type SOURCE p  = Source (Lhs p)
+type TARGET p  = Target (Lhs p)
+type DSOURCE p = Domain (SOURCE p)
+type DTARGET p = Domain (TARGET p)
+type PSOURCE p = Proofs (DSOURCE p)
+type PTARGET p = Proofs (DTARGET p)
 
 lhs :: forall p. IsProof p => p -> Lhs p
 lhs _ = proxy' (Proxy :: Proxy (Lhs p)) 

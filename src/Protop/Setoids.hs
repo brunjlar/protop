@@ -26,14 +26,11 @@ module Protop.Setoids
     , setUncurry
     , SetEql(..)
     , setInj
-    , eqT'
-    , eqT''
     ) where
 
 import Control.Arrow   ((&&&))
-import Data.Maybe      (fromMaybe)
 import Data.Proxy      (Proxy(..))
-import Data.Typeable   (Typeable, (:~:)(..), eqT, typeRep)
+import Data.Typeable   (Typeable)
 import Numeric.Natural (Natural)
 
 class (Typeable a, Typeable (Proofs a)) => IsSetoid a where
@@ -132,11 +129,14 @@ setRec z s = Functoid r (reflexivity . r)
 
 instance (IsSetoid a, IsSetoid b) => IsSetoid (Functoid a b) where
 
-    type Proofs (Functoid a b) = (Functoid a b, Functoid a b, Proofs a -> Proofs b)
+    type Proofs (Functoid a b) =
+            (Functoid a b, Functoid a b, Proofs a -> Proofs b)
 
     reflexivity f                      = (f, f, onProofs f)
-    symmetry _ (f, g, p)               = (g, f, symmetry (Proxy :: Proxy b) . p)
-    transitivity _ (f, g, p) (_, h, q) = (f, h, \x -> transitivity (Proxy :: Proxy b) (p x) (q x))
+    symmetry _ (f, g, p)               =
+        (g, f, symmetry (Proxy :: Proxy b) . p)
+    transitivity _ (f, _, p) (_, h, q) =
+        (f, h, \x -> transitivity (Proxy :: Proxy b) (p x) (q x))
     setLhs (f, _, _)                   = f
     setRhs (_, g, _)                   = g
 
@@ -147,7 +147,7 @@ type CCurry x y z = ( IsSetoid x
 
 setCurry :: forall x y z. CCurry x y z =>
                 Functoid (x, y) z -> Functoid x (Functoid y z)
-setCurry g = Functoid h $ curry $ onProofs g where
+setCurry g = Functoid h h''' where
 
     h :: x -> Functoid y z
     h x = Functoid h' h'' where
@@ -158,20 +158,18 @@ setCurry g = Functoid h $ curry $ onProofs g where
         h'' :: Proofs y -> Proofs z
         h'' py = g `onProofs` (reflexivity x, py)
 
+    h''' :: Proofs x -> (Functoid y z, Functoid y z, Proofs y -> Proofs z)
+    h''' px = (h $ setLhs px, h $ setRhs px, \py -> g `onProofs` (px, py))
+
 setUncurry :: forall x y z. CCurry x y z =>
-                Functoid (Functoid x (Functoid y z)) (Functoid (x, y) z)
-setUncurry = Functoid f uncurry
+                Functoid x (Functoid y z) -> Functoid (x, y) z
+setUncurry g = Functoid h h' where
 
-  where
+    h :: (x, y) -> z
+    h = uncurry $ onPoints . onPoints g
 
-    f :: Functoid x (Functoid y z) -> Functoid (x, y) z
-    f g = Functoid h h' where
-
-        h :: (x, y) -> z
-        h = uncurry $ onPoints . onPoints g
-
-        h' :: (Proofs x, Proofs y) -> Proofs z
-        h' = uncurry $ onProofs g
+    h' :: (Proofs x, Proofs y) -> Proofs z
+    h' (px, py) = let (_, _, hx) = g `onProofs` px in hx py
 
 data SetEql :: * -> * -> * where
     SetEql :: (IsSetoid x, IsSetoid y) => x -> Proofs y -> SetEql x y
@@ -184,28 +182,18 @@ deriving instance ( IsSetoid x
 
 instance (IsSetoid x, IsSetoid y) => IsSetoid (SetEql x y) where
 
-    type Proofs (SetEql x y) = Proofs x
+    type Proofs (SetEql x y) = (Proofs x, Proofs y, Proofs y)
 
-    reflexivity (SetEql x _) = reflexivity x
-    symmetry _               = symmetry (Proxy :: Proxy x)
-    transitivity _           = transitivity (Proxy :: Proxy x)
+    reflexivity (SetEql x py)     = (reflexivity x, py, py)
+    symmetry _  (px, py, py')     =
+        (symmetry (Proxy :: Proxy x) px, py', py)
+    transitivity _ (px,  py, _)
+                   (px', _,  py') =
+        (transitivity (Proxy :: Proxy x) px px', py, py')
+    setLhs (px, py, _)   = SetEql (setLhs px) py
+    setRhs (px, _,  py') = SetEql (setRhs px) py'
 
 setInj :: (IsSetoid x, IsSetoid y) => Functoid (SetEql x y) x
 setInj = Functoid f f' where
     f (SetEql x _) = x
-    f' = id
-
-eqT' :: forall a b. (Typeable a, Typeable b) => a -> b -> a :~: b
-eqT' _ _ = fromMaybe
-            (error $ "incompatible types " ++
-                show (typeRep (Proxy :: Proxy a)) ++ " and " ++
-                show (typeRep (Proxy :: Proxy b)))
-            eqT
-
-eqT'' :: forall a b. (Typeable a, Typeable b) =>
-            Proxy a -> Proxy b -> a :~: b
-eqT'' pa pb = fromMaybe
-                (error $ "incompatible types " ++
-                    show (typeRep pa) ++ " and " ++
-                    show (typeRep pb))
-                eqT 
+    f' (px, _, _)  = px

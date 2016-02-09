@@ -30,15 +30,16 @@ import Protop.Setoids
 import Protop.Symmetries
 import Protop.Terminal
 import Protop.Transitivities
+import Protop.Utility
 
 data MPoint :: * -> * where
 
     MPoint :: ( IsMorphism f
               , IsSetoid z
               ) => f ->
-                   Functoid z (Domain (Source f)) ->
-                   Functoid z (Domain (Source f)) ->
-                   (z -> Proofs (Domain (Target f))) ->
+                   Functoid z (DSource f) ->
+                   Functoid z (DSource f) ->
+                   (z -> PTarget f) ->
                    Proxy z -> z -> MPoint f
 
 data MProof :: * -> * where
@@ -46,22 +47,26 @@ data MProof :: * -> * where
     MProof :: ( IsMorphism f
               , IsSetoid z
               ) => f ->
-                   Functoid z (Domain (Source f)) ->
-                   Functoid z (Domain (Source f)) ->
-                   (z -> Proofs (Domain (Target f))) ->
+                   Functoid z (DSource f) ->
+                   Functoid z (DSource f) ->
+                   (z -> PTarget f) ->
                    Proxy z -> Proofs z -> MProof f
 
 instance IsMorphism f => IsSetoid (MPoint f) where
 
     type Proofs (MPoint f) = MProof f
 
-    reflexivity (MPoint f t t' p r x)     = MProof f t t' p r $ reflexivity x
-    symmetry _ (MProof f t t' p r px)     = MProof f t t' p r $ symmetry r px
+    reflexivity (MPoint f t t' p r x)      =
+        MProof f t t' p r $ reflexivity x
+    symmetry _ (MProof f t t' p r px)      =
+        MProof f t t' p r $ symmetry r px
     transitivity _ (MProof f t t' p  r px)
                    (MProof _ s s' p' _ qx) =
         case (eqT' t s, eqT' t' s', eqT' p p') of
            (Refl, Refl, Refl) ->
                 MProof f t t' p r $ transitivity r px qx
+    setLhs (MProof f t t' p r px) = MPoint f t t' p r $ setLhs px
+    setRhs (MProof f t t' p r px) = MPoint f t t' p r $ setRhs px
 
 data MonoTest :: * -> * where
 
@@ -184,10 +189,10 @@ monoIsInjective :: ( IsMorphism f
                    , Lhs p ~ MonoTest1 f
                    , Rhs p ~ MonoTest2 f
                    ) => f -> p ->
-                        Domain (Source f) ->
-                        Domain (Source f) ->
-                        Proofs (Domain (Target f)) ->
-                        Proofs (Domain (Source f))
+                        DSource f ->
+                        DSource f ->
+                        PTarget f ->
+                        PSource f
 monoIsInjective f m x x' p = proof m $
    MPoint f (setConst x) (setConst x') (const p) Proxy star
 

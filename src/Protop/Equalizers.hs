@@ -38,7 +38,7 @@ instance (Show (f :== g)) where
 
 instance CEql f g => IsObject (f :== g) where
 
-    type Domain (f :== g) = SetEql (Domain (Source f)) (Domain (Target f))
+    type Domain (f :== g) = SetEql (Domain (Source f)) (DTarget f)
 
     proxy _ = proxy' Proxy :== proxy' Proxy
     
@@ -83,7 +83,10 @@ instance CEql f g => IsProof (MONOINJ f g) where
     type Lhs (MONOINJ f g) = MonoTest1 (Inj f g)
     type Rhs (MONOINJ f g) = MonoTest2 (Inj f g)
 
-    proof (MONOINJ f g) = proof (MONOTEST $ Inj f g) 
+    proof (MONOINJ f g) t =
+        case (MonoTest1 (Inj f g) .$ t, MonoTest2 (Inj f g) .$ t) of
+            (SetEql _ py1, SetEql _ py2) ->
+                (proof (MONOTEST $ Inj f g) t, py1, py2)
     proxy'' _ = MONOINJ (proxy' Proxy) (proxy' Proxy)
 
 type CEql' f g h p = ( CEql f g
@@ -108,8 +111,11 @@ instance CEql' f g h p => IsMorphism (Eql f g h p) where
     type Target (Eql f g h p) = f :== g
 
     onDomains (Eql _ _ h p) = Functoid h' h'' where
-        h' z = SetEql (h .$ z) $ proof p z
-        h''  = onProofs (onDomains h)
+        h' z   = SetEql (h .$ z) $ proof p z
+        h'' pz = (onProofs (onDomains h) pz,
+                  proof p $ setLhs pz,
+                  proof p $ setRhs pz)
+
     proxy' _ = Eql (proxy' Proxy)
                    (proxy' Proxy)
                    (proxy' Proxy)

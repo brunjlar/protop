@@ -35,7 +35,7 @@ instance CComp a b => IsMorphism (a :. b) where
     onDomains (f :. g) = setComp (onDomains f) (onDomains g)
     proxy' _           = proxy' Proxy :. proxy' Proxy
 
-type CCOMPLEFT a b = (IsMorphism a, IsProof b, Source a ~ PTarget b)
+type CCOMPLEFT a b = (IsMorphism a, IsProof b, Source a ~ TARGET b)
 
 infix :.|
 
@@ -54,7 +54,7 @@ instance CCOMPLEFT a b => IsProof (a :.| b) where
     proof (f :.| p) x = let Functoid _ g = onDomains f in g $ proof p x
     proxy'' _         = proxy' Proxy :.| proxy'' Proxy
 
-type CCOMPRIGHT a b = (IsProof a, IsMorphism b, PSource a ~ Target b)
+type CCOMPRIGHT a b = (IsProof a, IsMorphism b, SOURCE a ~ Target b)
 
 infix :|.
 

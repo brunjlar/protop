@@ -9,7 +9,6 @@ module Protop.Transitivities
 
 import Data.Proxy     (Proxy(..))
 import Protop.Proofs
-import Protop.Objects
 import Protop.Setoids
 
 infixl 9 :>
@@ -32,5 +31,7 @@ instance ( IsProof a
     type Lhs (a :> b) = Lhs a
     type Rhs (a :> b) = Rhs b
 
-    proof (p :> q) x = transitivity (Proxy :: Proxy (Domain (PTarget a))) (proof p x) (proof q x)
+    proof (p :> q) x = transitivity (Proxy :: Proxy (DTARGET a))
+                                    (proof p x)
+                                    (proof q x)
     proxy'' _ = proxy'' Proxy :> proxy'' Proxy

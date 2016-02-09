@@ -13,10 +13,11 @@ module Protop.Omega
     , Sub(..)
     , SUB(..)
     , Omega(..)
+    , OMEGA(..)
     ) where
 
 import Data.Proxy          (Proxy(..))
-import Data.Typeable       (Typeable, (:~:)(..), eqT, typeRep)
+import Data.Typeable       ((:~:)(..))
 import Protop.Compositions
 import Protop.Identities
 import Protop.Monos
@@ -28,29 +29,28 @@ import Protop.Terminal
 
 data OPoint :: * where
 
-    OPoint :: IsMorphism f => f -> Domain (Target f) ->
-              Proofs (Domain (Target f)) -> OPoint
+    OPoint :: IsMorphism f => f -> DTarget f -> OPoint
 
 data OProof :: * where
 
     OProof :: ( IsMorphism f
               , IsMorphism g
-              ) => f -> g -> 
-                   (Domain (Source f) -> Domain (Source g)) ->
-                   (Domain (Source g) -> Domain (Source f)) ->
-                   Proofs (Domain (Target f)) ->
-                   Proofs (Domain (Target g)) ->
+              ) => f -> g -> DTarget f -> DTarget g ->
+                   ((DSource f, PTarget f) -> (DSource g, PTarget g)) ->
+                   ((DSource g, PTarget g) -> (DSource f, PTarget f)) ->
                    OProof
 
 instance IsSetoid OPoint where
 
     type Proofs OPoint = OProof
 
-    reflexivity (OPoint f _ p) = OProof f f id id p p
-    symmetry _ (OProof f g i j p q) = OProof g f j i q p
-    transitivity _ (OProof f  g i  j  p _)
-                   (OProof g' h i' j' _ r) =
-        case eqT' g g' of Refl -> OProof f h (i' . i) (j . j') p r
+    reflexivity (OPoint f x)               = OProof f f x x id id
+    symmetry _ (OProof f g x y i j)        = OProof g f y x j i
+    transitivity _ (OProof f  g x _ i  j)
+                   (OProof g' h _ z i' j') =
+        case eqT' g g' of Refl -> OProof f h x z (i' . i) (j . j')
+    setLhs (OProof f _ x _ _ _)            = OPoint f x
+    setRhs (OProof _ g _ y _ _)            = OPoint g y
 
 data O = O
 
@@ -76,8 +76,8 @@ instance IsMorphism True' where
     type Target True' = O
 
     onDomains _ = Functoid (const x) (const px) where
-        x  = OPoint (Id T) star star
-        px = OProof (Id T) (Id T) id id star star
+        x  = OPoint (Id T) star
+        px = OProof (Id T) (Id T) star star id id
 
     proxy' _ = True'
 
@@ -101,9 +101,12 @@ instance CSub f p => IsMorphism (Sub f p) where
     type Target (Sub f p) = O
 
     onDomains (Sub f _) = Functoid s s' where
-        s  x  = OPoint f x (reflexivity x)
-        s' px = OProof f f id id px
-                (symmetry (Proxy :: Proxy (Domain (Target f))) px)
+        s     = OPoint f
+        s' px =
+            let r = Proxy :: Proxy (DTarget f)
+            in  OProof f f (setLhs px) (setRhs px)
+                    (\(y, p) -> (y, transitivity r p px))
+                    (\(y, p) -> (y, transitivity r p $ symmetry r px))
 
     proxy' _ = Sub (proxy' Proxy) (proxy'' Proxy)
 
@@ -120,7 +123,9 @@ instance CSub f p => IsProof (SUB f p) where
     type Lhs (SUB f p) = Sub f p :. f
     type Rhs (SUB f p) = True' :. Terminal (Source f)
   
-    proof (SUB f _) x = OProof f (Id T) (const star) (const x) (reflexivity $ f .$ x) star
+    proof (SUB f _) x = OProof f (Id T) (f .$ x) star
+                            (const (star, star))
+                            (const (x, reflexivity $ f .$ x))
     proxy'' _         = SUB (proxy' Proxy) (proxy'' Proxy)
 
 type COmega f p g q = ( CSub f p
@@ -139,26 +144,13 @@ instance Show (Omega f p g q) where
 
     show (Omega f _ g _) = "(omega " ++ show f ++ " " ++ show g ++ ")"
 
-apply' :: forall a b a' b'. ( Typeable a
-                                 , Typeable a'
-                                 , Typeable b
-                                 , Typeable b'
-                                 ) => (a -> b) -> a' -> b'
-apply' f x =
-    let pa  = Proxy :: Proxy a
-        pa' = Proxy :: Proxy a'
-        pb  = Proxy :: Proxy b
-        pb' = Proxy :: Proxy b'
-    in case (eqT :: Maybe (a :~: a')) of
-        Just Refl ->
-            case (eqT :: Maybe (b :~: b')) of
-                Just Refl -> f x
-                Nothing   -> error $ "incompatible types " ++
-                                     show (typeRep pb) ++ " and " ++
-                                     show (typeRep pb')
-        Nothing   -> error $ "incompatible type " ++
-                             show (typeRep pa) ++ " and " ++
-                             show (typeRep pa')
+lift ::COmega f p g q =>
+            f -> q -> DSource g -> (DSource f, PTarget f)
+lift f q x =
+    case proof q x of
+        OProof f' g' _ _ _ j ->
+            case (eqT' f f', eqT' (Id T) g') of
+                (Refl, Refl) -> j (star, star)
 
 instance COmega f p g q => IsMorphism (Omega f p g q) where
 
@@ -166,10 +158,42 @@ instance COmega f p g q => IsMorphism (Omega f p g q) where
     type Target (Omega f p g q) = Source f
 
     onDomains (Omega f p g q) = Functoid t t' where
-        t   x = case proof q x of OProof _ _ _ j _ _ -> j `apply'` star
-        t' px = undefined
+        t   x = fst $ lift' x
+        t' px =
+            let (y1, p1) = lift' $ setLhs px
+                (y2, p2) = lift' $ setRhs px
+                r        = Proxy :: Proxy (DTarget f)
+                symm     = symmetry r
+                trans    = transitivity r
+                px'      = onProofs (onDomains g) px
+                p'       = trans p1 $ trans px' $ symm p2 
+            in  monoIsInjective f p y1 y2 p'
+
+        lift' :: DSource g -> (DSource f, PTarget f)
+        lift' = lift f q
 
     proxy' _ = Omega (proxy' Proxy)
                      (proxy'' Proxy)
                      (proxy' Proxy)
                      (proxy'' Proxy)
+
+data OMEGA :: * -> * -> * -> * -> * where
+
+    OMEGA :: COmega f p g q => f -> p -> g -> q -> OMEGA f p g q
+
+instance Show (OMEGA f p g q) where
+
+    show (OMEGA f p g q) = "(OMEGA " ++ show f ++ " " ++ show p ++ " " ++
+                           show g ++ " " ++ show q ++ ")"
+
+instance COmega f p g q => IsProof (OMEGA f p g q) where
+
+    type Lhs (OMEGA f p g q) = f :. Omega f p g q
+    type Rhs (OMEGA f p g q) = g
+
+    proof (OMEGA f _ _ q) x = snd $ lift f q x
+
+    proxy'' _ = OMEGA (proxy' Proxy)
+                      (proxy'' Proxy)
+                      (proxy' Proxy)
+                      (proxy'' Proxy)
