@@ -20,7 +20,7 @@ module Protop.Monos
     ) where
 
 import Data.Proxy            (Proxy(..))
-import Data.Typeable         (Typeable, typeRep, (:~:)(..), eqT)
+import Data.Typeable         ((:~:)(..))
 import Protop.Compositions
 import Protop.Identities
 import Protop.Objects
@@ -54,13 +54,6 @@ data MProof :: * -> * where
     MProof :: CMonoTest f t t' p =>
                 f -> t -> t' -> p ->
                 Proxy (Dom t) -> Proofs (Dom t) -> MProof f
-
-eqT' :: forall a b. (Typeable a, Typeable b) => a -> b -> a :~: b
-eqT' _ _ = case eqT of
-    Just r  -> r
-    Nothing -> error $ "incompatible types " ++
-        show (typeRep (Proxy :: Proxy a)) ++ " and " ++
-        show (typeRep (Proxy :: Proxy b))
 
 instance IsMorphism f => IsSetoid (MPoint f) where
 

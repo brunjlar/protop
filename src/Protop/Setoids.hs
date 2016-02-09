@@ -5,6 +5,7 @@
 {-# Language ScopedTypeVariables #-}
 {-# Language ConstraintKinds #-}
 {-# Language StandaloneDeriving #-}
+{-# Language TypeOperators #-}
 
 module Protop.Setoids
     ( IsSetoid(..)
@@ -25,11 +26,20 @@ module Protop.Setoids
     , setUncurry
     , SetEql(..)
     , setInj
+    , eqT'
+    , eqT''
+    , MonoTestPoint(..)
+    , MonoTestProof(..)
+    , setMonoTest1
+    , setMonoTest2
+    , setMONOTEST
+    , setMONOAPPLY
     ) where
 
 import Control.Arrow   ((&&&))
+import Data.Maybe      (fromMaybe)
 import Data.Proxy      (Proxy(..))
-import Data.Typeable   (Typeable)
+import Data.Typeable   (Typeable, (:~:)(..), eqT, typeRep)
 import Numeric.Natural (Natural)
 
 class (Typeable a, Typeable (Proofs a)) => IsSetoid a where
@@ -185,3 +195,82 @@ setInj :: (IsSetoid x, IsSetoid y) => Functoid (SetEql x y) x
 setInj = Functoid f f' where
     f (SetEql x _) = x
     f' = id
+
+data MonoTestPoint :: * -> * -> * where
+
+    MonoTestPoint :: ( IsSetoid x
+                     , IsSetoid y
+                     , IsSetoid t
+                     ) => Functoid x y ->
+                          Proxy t -> Functoid t x -> Functoid t x ->
+                          (t -> Proofs y) -> t -> MonoTestPoint x y
+
+data MonoTestProof :: * -> * -> * where
+
+    MonoTestProof :: ( IsSetoid x
+                     , IsSetoid y
+                     , IsSetoid t
+                     ) => Functoid x y ->
+                          Proxy t -> Functoid t x -> Functoid t x ->
+                          (t -> Proofs y) -> Proofs t -> MonoTestProof x y
+
+eqT' :: forall a b. (Typeable a, Typeable b) => a -> b -> a :~: b
+eqT' _ _ = fromMaybe
+            (error $ "incompatible types " ++
+                show (typeRep (Proxy :: Proxy a)) ++ " and " ++
+                show (typeRep (Proxy :: Proxy b)))
+            eqT
+
+eqT'' :: forall a b. (Typeable a, Typeable b) =>
+            Proxy a -> Proxy b -> a :~: b
+eqT'' pa pb = fromMaybe
+                (error $ "incompatible types " ++
+                    show (typeRep pa) ++ " and " ++
+                    show (typeRep pb))
+                eqT 
+
+instance ( IsSetoid x
+         , IsSetoid y
+         ) => IsSetoid (MonoTestPoint x y) where
+
+    type Proofs (MonoTestPoint x y) = MonoTestProof x y
+
+    reflexivity (MonoTestPoint f pt t t' p u) =
+        MonoTestProof f pt t t' p $ reflexivity u
+
+    symmetry _ (MonoTestProof f pt t t' p p') =
+        MonoTestProof f pt t t' p $ symmetry pt p'        
+
+    transitivity _ (MonoTestProof f (pt :: Proxy t) t t' p q)
+                   (MonoTestProof _ (pu :: Proxy u) _ _  _ q') =
+        case eqT'' pt pu of
+            Refl -> MonoTestProof f pt t t' p $ transitivity pt q q'
+
+setMonoTest1 :: ( IsSetoid x
+                , IsSetoid y
+                ) => Functoid x y -> Functoid (MonoTestPoint x y) x
+setMonoTest1 _ = Functoid i j where
+    i (MonoTestPoint _ _ t _ _ u)  = t `onPoints` u
+    j (MonoTestProof _ _ t _ _ pt) = t `onProofs` pt
+
+setMonoTest2 :: ( IsSetoid x
+                , IsSetoid y
+                ) => Functoid x y -> Functoid (MonoTestPoint x y) x
+setMonoTest2 _ = Functoid i j where
+    i (MonoTestPoint _ _ _ t' _ u)  = t' `onPoints` u
+    j (MonoTestProof _ _ _ t' _ pt) = t' `onProofs` pt
+
+setMONOTEST :: ( IsSetoid x
+               , IsSetoid y
+               ) => Functoid x y -> MonoTestPoint x y -> Proofs y
+setMONOTEST _ (MonoTestPoint _ _ _ _ p u) = p u
+
+setMONOAPPLY :: ( IsSetoid x
+                , IsSetoid y
+                , IsSetoid t
+                ) => Functoid x y ->
+                     (MonoTestPoint x y -> Proofs x) ->
+                     Functoid t x -> Functoid t x ->
+                     (t -> Proofs y) -> t -> Proofs x
+setMONOAPPLY f m t t' p u = m $
+    MonoTestPoint f (Proxy :: Proxy t) t t' p u

@@ -97,7 +97,7 @@ instance CSub f p => IsMorphism (Sub f p) where
     type Target (Sub f p) = O
 
     onDomains (Sub f _) = Functoid s s' where
-        s  x = OPoint f x
+        s    = OPoint f
         s' _ = OProof f f id id
 
     proxy' _ = Sub (proxy' Proxy) (proxy'' Proxy)
