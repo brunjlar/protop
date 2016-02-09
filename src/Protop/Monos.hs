@@ -6,13 +6,13 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Protop.Monos
-    ( MPoint(..)
-    , MProof(..)
-    , MonoTest(..)
+    ( MonoTest(..)
     , MonoTest1(..)
     , MonoTest2(..)
     , MONOTEST(..)
     , MONOAPPLY(..)
+    , setConst
+    , monoIsInjective
     , monoId
     , monoComp
     , monoT
@@ -31,29 +31,25 @@ import Protop.Symmetries
 import Protop.Terminal
 import Protop.Transitivities
 
-type CMonoTest f t t' p = ( IsMorphism f
-                          , IsMorphism t
-                          , IsMorphism t'
-                          , IsProof p
-                          , Source t ~ Source t'
-                          , Target t ~ Target t'
-                          , Target t ~ Source f
-                          , Lhs p ~ (f :. t)
-                          , Rhs p ~ (f :. t')
-                          )
-
-type Dom t = Domain (Source t)
-
 data MPoint :: * -> * where
 
-    MPoint :: CMonoTest f t t' p =>
-                f -> t -> t' -> p -> Proxy (Dom t) -> Dom t -> MPoint f
+    MPoint :: ( IsMorphism f
+              , IsSetoid z
+              ) => f ->
+                   Functoid z (Domain (Source f)) ->
+                   Functoid z (Domain (Source f)) ->
+                   (z -> Proofs (Domain (Target f))) ->
+                   Proxy z -> z -> MPoint f
 
 data MProof :: * -> * where
 
-    MProof :: CMonoTest f t t' p =>
-                f -> t -> t' -> p ->
-                Proxy (Dom t) -> Proofs (Dom t) -> MProof f
+    MProof :: ( IsMorphism f
+              , IsSetoid z
+              ) => f ->
+                   Functoid z (Domain (Source f)) ->
+                   Functoid z (Domain (Source f)) ->
+                   (z -> Proofs (Domain (Target f))) ->
+                   Proxy z -> Proofs z -> MProof f
 
 instance IsMorphism f => IsSetoid (MPoint f) where
 
@@ -66,7 +62,7 @@ instance IsMorphism f => IsSetoid (MPoint f) where
         case (eqT' t s, eqT' t' s', eqT' p p') of
            (Refl, Refl, Refl) ->
                 MProof f t t' p r $ transitivity r px qx
-          
+
 data MonoTest :: * -> * where
 
     MonoTest :: IsMorphism f => f -> MonoTest f
@@ -96,9 +92,9 @@ instance IsMorphism f => IsMorphism (MonoTest1 f) where
 
     onDomains (MonoTest1 f) = Functoid g g' where
         g (MPoint f' t _ _ _ x) =
-            case eqT' f f' of Refl -> t .$ x
+            case eqT' f f' of Refl -> t `onPoints` x
         g' (MProof f' t _ _ _ px) =
-            case eqT' f f' of Refl -> onProofs (onDomains t) px
+            case eqT' f f' of Refl -> t `onProofs` px
 
     proxy' _ = MonoTest1 (proxy' Proxy)
 
@@ -117,9 +113,9 @@ instance IsMorphism f => IsMorphism (MonoTest2 f) where
 
     onDomains (MonoTest2 f) = Functoid g g' where
         g (MPoint f' _ t' _ _ x) =
-            case eqT' f f' of Refl -> t' .$ x
+            case eqT' f f' of Refl -> t' `onPoints` x
         g' (MProof f' _ t' _ _ px) =
-            case eqT' f f' of Refl -> onProofs (onDomains t') px
+            case eqT' f f' of Refl -> t' `onProofs` px
 
     proxy' _ = MonoTest2 (proxy' Proxy)
 
@@ -137,7 +133,7 @@ instance IsMorphism f => IsProof (MONOTEST f) where
     type Rhs (MONOTEST f) = f :. MonoTest2 f 
 
     proof (MONOTEST f) (MPoint f' _ _ p _ x) =
-        case eqT' f f' of Refl -> proof p x
+        case eqT' f f' of Refl -> p x
 
     proxy'' _ = MONOTEST (proxy' Proxy)
 
@@ -171,13 +167,29 @@ instance CMONOAPPLY f t t' p p' => IsProof (MONOAPPLY f t t' p p') where
     type Lhs (MONOAPPLY f t t' p p') = t
     type Rhs (MONOAPPLY f t t' p p') = t'
 
-    proof (MONOAPPLY f t t' p p') x = proof p $ MPoint f t t' p' Proxy x
+    proof (MONOAPPLY f t t' p p') x = proof p $
+        MPoint f (onDomains t) (onDomains t') (proof p') Proxy x
 
     proxy'' _ = MONOAPPLY (proxy' Proxy)
                           (proxy' Proxy)
                           (proxy' Proxy)
                           (proxy'' Proxy)
                           (proxy'' Proxy)
+
+setConst :: IsSetoid x => x -> Functoid Star x
+setConst  x = Functoid (const x) (const $ reflexivity x)
+
+monoIsInjective :: ( IsMorphism f
+                   , IsProof p
+                   , Lhs p ~ MonoTest1 f
+                   , Rhs p ~ MonoTest2 f
+                   ) => f -> p ->
+                        Domain (Source f) ->
+                        Domain (Source f) ->
+                        Proofs (Domain (Target f)) ->
+                        Proofs (Domain (Source f))
+monoIsInjective f m x x' p = proof m $
+   MPoint f (setConst x) (setConst x') (const p) Proxy star
 
 monoId :: IsObject x => x -> Proof (MonoTest1 (Id x)) (MonoTest2 (Id x))
 monoId x = Proof $ SYMM (IDLEFT (MonoTest1 (Id x))) :>
