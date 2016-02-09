@@ -43,6 +43,8 @@ class (Typeable a, Typeable (Proofs a)) => IsSetoid a where
     reflexivity  :: a -> Proofs a
     symmetry     :: Proxy a -> Proofs a -> Proofs a
     transitivity :: Proxy a -> Proofs a -> Proofs a -> Proofs a
+    setLhs       :: Proofs a -> a
+    setRhs       :: Proofs a -> a
 
 data Functoid :: * -> * -> * where
     Functoid :: (IsSetoid a, IsSetoid b) => (a -> b) -> (Proofs a -> Proofs b) -> Functoid a b
@@ -68,6 +70,8 @@ instance CProd a b => IsSetoid (a, b) where
     reflexivity (x, y)             = (reflexivity x, reflexivity y)
     symmetry _ (p, q)              = (symmetry (Proxy :: Proxy a) p, symmetry (Proxy :: Proxy b) q)
     transitivity _ (p, q) (p', q') = (transitivity (Proxy :: Proxy a) p p', transitivity (Proxy :: Proxy b) q q')
+    setLhs (p, q)                  = (setLhs p, setLhs q)
+    setRhs (p, q)                  = (setRhs p, setRhs q)
 
 setPr1 :: CProd a b => Functoid (a, b) a
 setPr1 = Functoid fst fst
@@ -90,6 +94,8 @@ instance IsSetoid Star where
     reflexivity _      = star
     symmetry _ _       = star
     transitivity _ _ _ = star
+    setLhs _           = star
+    setRhs _           = star
 
 setT :: IsSetoid a => Functoid a Star
 setT = Functoid (const star) (const star)
@@ -103,6 +109,8 @@ instance IsSetoid Natural where
     transitivity _ m n
         | m == n = m
         | otherwise = error $ "incompatible proofs: " ++ show m ++ " and " ++ show n
+    setLhs n     = n
+    setRhs n     = n
     
 setZero :: Functoid Star Natural
 setZero = Functoid (const 0) (const 0)
@@ -124,11 +132,13 @@ setRec z s = Functoid r (reflexivity . r)
 
 instance (IsSetoid a, IsSetoid b) => IsSetoid (Functoid a b) where
 
-    type Proofs (Functoid a b) = Proofs a -> Proofs b
+    type Proofs (Functoid a b) = (Functoid a b, Functoid a b, Proofs a -> Proofs b)
 
-    reflexivity          = onProofs
-    symmetry _ p         = symmetry (Proxy :: Proxy b) . p
-    transitivity _ p q x = transitivity (Proxy :: Proxy b) (p x) (q x)
+    reflexivity f                      = (f, f, onProofs f)
+    symmetry _ (f, g, p)               = (g, f, symmetry (Proxy :: Proxy b) . p)
+    transitivity _ (f, g, p) (_, h, q) = (f, h, \x -> transitivity (Proxy :: Proxy b) (p x) (q x))
+    setLhs (f, _, _)                   = f
+    setRhs (_, g, _)                   = g
 
 type CCurry x y z = ( IsSetoid x
                     , IsSetoid y
@@ -136,22 +146,17 @@ type CCurry x y z = ( IsSetoid x
                     )
 
 setCurry :: forall x y z. CCurry x y z =>
-              Functoid (Functoid (x, y) z) (Functoid x (Functoid y z))
-setCurry = Functoid f curry
+                Functoid (x, y) z -> Functoid x (Functoid y z)
+setCurry g = Functoid h $ curry $ onProofs g where
 
-  where
+    h :: x -> Functoid y z
+    h x = Functoid h' h'' where
 
-    f :: Functoid (x, y) z -> Functoid x (Functoid y z)
-    f g = Functoid h $ curry $ onProofs g where
+        h' :: y -> z
+        h' y = g `onPoints` (x, y)
 
-        h :: x -> Functoid y z
-        h x = Functoid h' h'' where
-
-            h' :: y -> z
-            h' y = g `onPoints` (x, y)
-
-            h'' :: Proofs y -> Proofs z
-            h'' py = g `onProofs` (reflexivity x, py)
+        h'' :: Proofs y -> Proofs z
+        h'' py = g `onProofs` (reflexivity x, py)
 
 setUncurry :: forall x y z. CCurry x y z =>
                 Functoid (Functoid x (Functoid y z)) (Functoid (x, y) z)

@@ -28,25 +28,29 @@ import Protop.Terminal
 
 data OPoint :: * where
 
-    OPoint :: IsMorphism f => f -> Domain (Target f) -> OPoint
+    OPoint :: IsMorphism f => f -> Domain (Target f) ->
+              Proofs (Domain (Target f)) -> OPoint
 
 data OProof :: * where
 
     OProof :: ( IsMorphism f
               , IsMorphism g
-              ) => f -> g -> (Domain (Source f) -> Domain (Source g)) ->
-                             (Domain (Source g) -> Domain (Source f)) ->
-                             OProof
+              ) => f -> g -> 
+                   (Domain (Source f) -> Domain (Source g)) ->
+                   (Domain (Source g) -> Domain (Source f)) ->
+                   Proofs (Domain (Target f)) ->
+                   Proofs (Domain (Target g)) ->
+                   OProof
 
 instance IsSetoid OPoint where
 
     type Proofs OPoint = OProof
 
-    reflexivity (OPoint f _) = OProof f f id id
-    symmetry _ (OProof f g i j) = OProof g f j i
-    transitivity _ (OProof f  g i  j)
-                   (OProof g' h i' j') =
-        case eqT' g g' of Refl -> OProof f h (i' . i) (j . j')
+    reflexivity (OPoint f _ p) = OProof f f id id p p
+    symmetry _ (OProof f g i j p q) = OProof g f j i q p
+    transitivity _ (OProof f  g i  j  p _)
+                   (OProof g' h i' j' _ r) =
+        case eqT' g g' of Refl -> OProof f h (i' . i) (j . j') p r
 
 data O = O
 
@@ -71,9 +75,9 @@ instance IsMorphism True' where
     type Source True' = T
     type Target True' = O
 
-    onDomains _ = Functoid f f' where
-        f _  = OPoint (Id T) star
-        f' _ = OProof (Id T) (Id T) id id
+    onDomains _ = Functoid (const x) (const px) where
+        x  = OPoint (Id T) star star
+        px = OProof (Id T) (Id T) id id star star
 
     proxy' _ = True'
 
@@ -97,8 +101,9 @@ instance CSub f p => IsMorphism (Sub f p) where
     type Target (Sub f p) = O
 
     onDomains (Sub f _) = Functoid s s' where
-        s    = OPoint f
-        s' _ = OProof f f id id
+        s  x  = OPoint f x (reflexivity x)
+        s' px = OProof f f id id px
+                (symmetry (Proxy :: Proxy (Domain (Target f))) px)
 
     proxy' _ = Sub (proxy' Proxy) (proxy'' Proxy)
 
@@ -115,7 +120,7 @@ instance CSub f p => IsProof (SUB f p) where
     type Lhs (SUB f p) = Sub f p :. f
     type Rhs (SUB f p) = True' :. Terminal (Source f)
   
-    proof (SUB f _) x = OProof f (Id T) (const star) (const x)
+    proof (SUB f _) x = OProof f (Id T) (const star) (const x) (reflexivity $ f .$ x) star
     proxy'' _         = SUB (proxy' Proxy) (proxy'' Proxy)
 
 type COmega f p g q = ( CSub f p
@@ -161,8 +166,8 @@ instance COmega f p g q => IsMorphism (Omega f p g q) where
     type Target (Omega f p g q) = Source f
 
     onDomains (Omega f p g q) = Functoid t t' where
-        t x = case proof q x of OProof _ _ _ j -> j `apply'` star
-        t' = undefined
+        t   x = case proof q x of OProof _ _ _ j _ _ -> j `apply'` star
+        t' px = undefined
 
     proxy' _ = Omega (proxy' Proxy)
                      (proxy'' Proxy)
