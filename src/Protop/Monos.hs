@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Protop.Monos
     ( MonoTest(..)
@@ -12,11 +13,15 @@ module Protop.Monos
     , MONOTEST(..)
     , MONOAPPLY(..)
     , setConst
+    , CMONO
+    , MonoProof
     , monoIsInjective
+    , monoEq
     , monoId
     , monoComp
+    , monoComp'
     , monoT
-    , eqT'
+    , monoDiag
     ) where
 
 import Data.Proxy            (Proxy(..))
@@ -25,6 +30,7 @@ import Protop.Compositions
 import Protop.Identities
 import Protop.Objects
 import Protop.Morphisms
+import Protop.Products
 import Protop.Proofs
 import Protop.Setoids
 import Protop.Symmetries
@@ -142,16 +148,13 @@ instance IsMorphism f => IsProof (MONOTEST f) where
 
     proxy'' _ = MONOTEST (proxy' Proxy)
 
-type CMONOAPPLY f t t' p p' = ( IsMorphism f
+type CMONOAPPLY f t t' p p' = ( CMONO f p
                               , IsMorphism t
                               , IsMorphism t'
-                              , IsProof p
                               , IsProof p'
                               , Source t ~ Source t'
                               , Target t ~ Target t'
                               , Target t ~ Source f
-                              , Lhs p ~ MonoTest1 f
-                              , Rhs p ~ MonoTest2 f
                               , Lhs p' ~ (f :. t)
                               , Rhs p' ~ (f :. t')
                               )
@@ -181,13 +184,18 @@ instance CMONOAPPLY f t t' p p' => IsProof (MONOAPPLY f t t' p p') where
                           (proxy'' Proxy)
                           (proxy'' Proxy)
 
+type CMONO f m = ( IsMorphism f
+                 , IsProof m
+                 , Lhs m ~ MonoTest1 f
+                 , Rhs m ~ MonoTest2 f
+                 )
+
+type MonoProof f = Proof (MonoTest1 f) (MonoTest2 f)
+
 setConst :: IsSetoid x => x -> Functoid Star x
 setConst  x = Functoid (const x) (const $ reflexivity x)
 
-monoIsInjective :: ( IsMorphism f
-                   , IsProof p
-                   , Lhs p ~ MonoTest1 f
-                   , Rhs p ~ MonoTest2 f
+monoIsInjective :: ( CMONO f p
                    ) => f -> p ->
                         DSource f ->
                         DSource f ->
@@ -196,25 +204,62 @@ monoIsInjective :: ( IsMorphism f
 monoIsInjective f m x x' p = proof m $
    MPoint f (setConst x) (setConst x') (const p) Proxy star
 
-monoId :: IsObject x => x -> Proof (MonoTest1 (Id x)) (MonoTest2 (Id x))
+monoEq :: ( CMONO f m
+          , IsMorphism f'
+          , IsProof p
+          , Lhs p ~ f
+          , Rhs p ~ f'
+          ) => f -> m -> f' -> p -> MonoProof f'
+monoEq f m f' p =
+    let t  = MonoTest1 f'
+        t' = MonoTest2 f'
+    in  Proof $ MONOAPPLY f t t' m $
+            (p :|. t) :>
+            MONOTEST f' :>
+            (SYMM p :|. t')
+
+monoId :: IsObject x => x -> MonoProof (Id x)
 monoId x = Proof $ SYMM (IDLEFT (MonoTest1 (Id x))) :>
                    MONOTEST (Id x) :>
                    IDLEFT (MonoTest2 (Id x))
 
 monoComp :: ( IsMorphism f
             , IsMorphism g
-            , IsProof p
             , Source f ~ Target g
-            , Lhs p ~ MonoTest1 (f :. g)
-            , Rhs p ~ MonoTest2 (f :. g)
-            ) => f -> g -> p -> Proof (MonoTest1 g) (MonoTest2 g)
+            , CMONO (f :. g) p
+            ) => f -> g -> p -> MonoProof g
 monoComp f g p = Proof $
     MONOAPPLY (f :. g) (MonoTest1 g) (MonoTest2 g) p $
     ASS f g (MonoTest1 g) :>
     (f :.| MONOTEST g) :>
     SYMM (ASS f g (MonoTest2 g))
 
-monoT :: ( IsMorphism f
-         , Source f ~ T
-         ) => f -> Proof (MonoTest1 f) (MonoTest2 f)
+monoComp' :: ( CMONO f mf
+             , CMONO g mg
+             , Source f ~ Target g
+             ) => f -> mf -> g -> mg -> MonoProof (f :. g)
+monoComp' f mf g mg =
+    let fg = f :. g
+        t  = MonoTest1 fg
+        t' = MonoTest2 fg
+        p  = SYMM (ASS f g t) :> MONOTEST fg :> ASS f g t'
+        q  = MONOAPPLY f (g :. t) (g :. t') mf p
+    in  Proof $ MONOAPPLY g t t' mg q
+
+monoT :: (IsMorphism f, Source f ~ T) => f -> MonoProof f
 monoT f = Proof $ TERMINAL (MonoTest1 f) :> SYMM (TERMINAL (MonoTest2 f))
+
+monoDiag :: IsObject x => x -> MonoProof (Diag x)
+monoDiag x =
+    let d  = diag x
+        t  = MonoTest1 d
+        t' = MonoTest2 d
+        pr = Pr1 x x
+    in  Proof $
+            SYMM (IDLEFT t) :>
+            (SYMM (PROD1 (Id x) (Id x)) :|. t) :>
+            ASS pr d t :>
+            (pr :.| MONOTEST d) :>
+            SYMM (ASS pr d t') :>
+            (PROD1 (Id x) (Id x) :|. t') :>
+            IDLEFT t'

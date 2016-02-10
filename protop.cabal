@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Protop
-  other-modules:       Protop.Compositions
+                     , Protop.Compositions
                      , Protop.Equalizers
                      , Protop.Exponentials
                      , Protop.Identities
@@ -45,6 +45,7 @@ test-suite protop-test
                      , hspec
                      , protop
   other-modules:       Protop.NaturalSpec
+                     , Protop.OmegaSpec
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
 

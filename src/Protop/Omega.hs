@@ -9,7 +9,7 @@ module Protop.Omega
     ( OPoint(..)
     , OProof(..)
     , O(..)
-    , True'
+    , True'(..)
     , Sub(..)
     , SUB(..)
     , Omega(..)
@@ -26,6 +26,7 @@ import Protop.Objects
 import Protop.Proofs
 import Protop.Setoids
 import Protop.Terminal
+import Protop.Utility
 
 data OPoint :: * where
 
@@ -81,21 +82,15 @@ instance IsMorphism True' where
 
     proxy' _ = True'
 
-type CSub f p = ( IsMorphism f
-                , IsProof p
-                , Lhs p ~ MonoTest1 f
-                , Rhs p ~ MonoTest2 f
-                )
-
 data Sub :: * -> * -> * where
    
-   Sub :: CSub f p => f -> p -> Sub f p
+   Sub :: CMONO f p => f -> p -> Sub f p
 
 instance Show (Sub f p) where
 
     show (Sub f _) = "(sub " ++ show f ++ ")"
 
-instance CSub f p => IsMorphism (Sub f p) where
+instance CMONO f p => IsMorphism (Sub f p) where
 
     type Source (Sub f p) = Target f
     type Target (Sub f p) = O
@@ -112,13 +107,13 @@ instance CSub f p => IsMorphism (Sub f p) where
 
 data SUB :: * -> * -> * where
    
-   SUB :: CSub f p => f -> p -> SUB f p
+   SUB :: CMONO f p => f -> p -> SUB f p
 
 instance Show (SUB f p) where
 
     show (SUB f _) = "(SUB " ++ show f ++ ")"
 
-instance CSub f p => IsProof (SUB f p) where
+instance CMONO f p => IsProof (SUB f p) where
 
     type Lhs (SUB f p) = Sub f p :. f
     type Rhs (SUB f p) = True' :. Terminal (Source f)
@@ -128,7 +123,7 @@ instance CSub f p => IsProof (SUB f p) where
                             (const (x, reflexivity $ f .$ x))
     proxy'' _         = SUB (proxy' Proxy) (proxy'' Proxy)
 
-type COmega f p g q = ( CSub f p
+type COmega f p g q = ( CMONO f p
                       , IsMorphism g
                       , IsProof q
                       , Target g ~ Target f

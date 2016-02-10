@@ -12,10 +12,13 @@ module Protop.Products
     , PROD1(..)
     , PROD2(..)
     , PROD(..)
+    , Diag
+    , diag
     ) where
 
 import Data.Proxy (Proxy(..))
 import Protop.Compositions
+import Protop.Identities
 import Protop.Morphisms
 import Protop.Objects
 import Protop.Proofs
@@ -137,3 +140,7 @@ instance CPROD a b c => IsProof (PROD a b c) where
 
     proof (PROD _ p q) x = (proof p x, proof q x)
     proxy'' _ = PROD (proxy' Proxy) (proxy'' Proxy) (proxy'' Proxy)
+
+type Diag x = Id x :&&& Id x
+diag :: IsObject x => x -> Diag x
+diag _ = proxy' Proxy
