@@ -4,7 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ConstraintKinds #-}
 
-module Protop.Products
+module Protop.Core.Products
     ( (:*)(..)
     , Pr1(..)
     , Pr2(..)
@@ -16,13 +16,13 @@ module Protop.Products
     , diag
     ) where
 
-import Data.Proxy (Proxy(..))
-import Protop.Compositions
-import Protop.Identities
-import Protop.Morphisms
-import Protop.Objects
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy               (Proxy(..))
+import Protop.Core.Compositions
+import Protop.Core.Identities
+import Protop.Core.Morphisms
+import Protop.Core.Objects
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 infixl 7 :*
 

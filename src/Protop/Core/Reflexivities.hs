@@ -2,14 +2,14 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Protop.Reflexivities
+module Protop.Core.Reflexivities
     ( REFL(..)
     ) where
 
-import Data.Proxy       (Proxy(..))
-import Protop.Morphisms
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy            (Proxy(..))
+import Protop.Core.Morphisms
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 data REFL :: * -> * where
     REFL :: IsMorphism a => a -> REFL a

@@ -4,17 +4,17 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Protop.Terminal
+module Protop.Core.Terminal
     ( T(..)
     , Terminal(..)
     , TERMINAL(..)
     ) where
 
-import Data.Proxy       (Proxy(..))
-import Protop.Morphisms
-import Protop.Objects
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy            (Proxy(..))
+import Protop.Core.Morphisms
+import Protop.Core.Objects
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 data T = T
 

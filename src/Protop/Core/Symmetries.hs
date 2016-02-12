@@ -2,13 +2,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Protop.Symmetries
+module Protop.Core.Symmetries
     ( SYMM(..)
     ) where
 
-import Data.Proxy     (Proxy(..))
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy          (Proxy(..))
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 data SYMM :: * -> * where
     SYMM :: IsProof a => a -> SYMM a

@@ -1,6 +1,6 @@
-module Protop.NaturalSpec (spec) where
+module Protop.Core.NaturalSpec (spec) where
 
-import Protop
+import Protop.Core
 import Test.Hspec
 
 spec :: Spec

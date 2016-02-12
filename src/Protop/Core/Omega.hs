@@ -5,7 +5,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Protop.Omega
+module Protop.Core.Omega
     ( OPoint(..)
     , OProof(..)
     , O(..)
@@ -16,16 +16,16 @@ module Protop.Omega
     , OMEGA(..)
     ) where
 
-import Data.Proxy          (Proxy(..))
-import Data.Typeable       ((:~:)(..))
-import Protop.Compositions
-import Protop.Identities
-import Protop.Monos
-import Protop.Morphisms
-import Protop.Objects
-import Protop.Proofs
-import Protop.Setoids
-import Protop.Terminal
+import Data.Proxy               (Proxy(..))
+import Data.Typeable            ((:~:)(..))
+import Protop.Core.Compositions
+import Protop.Core.Identities
+import Protop.Core.Monos
+import Protop.Core.Morphisms
+import Protop.Core.Objects
+import Protop.Core.Proofs
+import Protop.Core.Setoids
+import Protop.Core.Terminal
 import Protop.Utility
 
 data OPoint :: * where

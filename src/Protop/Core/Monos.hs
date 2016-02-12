@@ -6,7 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Protop.Monos
+module Protop.Core.Monos
     ( MonoTest(..)
     , MonoTest1(..)
     , MonoTest2(..)
@@ -24,18 +24,18 @@ module Protop.Monos
     , monoDiag
     ) where
 
-import Data.Proxy            (Proxy(..))
-import Data.Typeable         ((:~:)(..))
-import Protop.Compositions
-import Protop.Identities
-import Protop.Objects
-import Protop.Morphisms
-import Protop.Products
-import Protop.Proofs
-import Protop.Setoids
-import Protop.Symmetries
-import Protop.Terminal
-import Protop.Transitivities
+import Data.Proxy                 (Proxy(..))
+import Data.Typeable              ((:~:)(..))
+import Protop.Core.Compositions
+import Protop.Core.Identities
+import Protop.Core.Objects
+import Protop.Core.Morphisms
+import Protop.Core.Products
+import Protop.Core.Proofs
+import Protop.Core.Setoids
+import Protop.Core.Symmetries
+import Protop.Core.Terminal
+import Protop.Core.Transitivities
 import Protop.Utility
 
 data MPoint :: * -> * where

@@ -1,6 +1,6 @@
-module Protop.OmegaSpec (spec) where
+module Protop.Core.OmegaSpec (spec) where
 
-import Protop
+import Protop.Core
 import Test.Hspec
 
 spec :: Spec

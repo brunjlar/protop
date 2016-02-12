@@ -7,7 +7,7 @@
 {-# Language StandaloneDeriving #-}
 {-# Language TypeOperators #-}
 
-module Protop.Setoids
+module Protop.Core.Setoids
     ( IsSetoid(..)
     , Functoid(..)
     , onPoints, onProofs

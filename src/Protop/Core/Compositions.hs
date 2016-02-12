@@ -4,17 +4,17 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ConstraintKinds #-}
 
-module Protop.Compositions
+module Protop.Core.Compositions
     ( (:.)(..)
     , (:.|)(..)
     , (:|.)(..)
     , ASS(..)
     ) where
 
-import Data.Proxy       (Proxy(..))
-import Protop.Morphisms
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy            (Proxy(..))
+import Protop.Core.Morphisms
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 type CComp a b = (IsMorphism a, IsMorphism b, Source a ~ Target b)
 

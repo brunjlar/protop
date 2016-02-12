@@ -4,7 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Protop.Natural
+module Protop.Core.Natural
     ( N(..)
     , Zero(..)
     , Succ(..)
@@ -18,18 +18,18 @@ module Protop.Natural
     , mul
     ) where
 
-import Data.Proxy            (Proxy(..))
-import Numeric.Natural       (Natural)
-import Protop.Compositions
-import Protop.Exponentials
-import Protop.Morphisms
-import Protop.Objects
-import Protop.Products
-import Protop.Proofs
-import Protop.Setoids
-import Protop.Symmetries
-import Protop.Terminal
-import Protop.Transitivities
+import Data.Proxy                 (Proxy(..))
+import Numeric.Natural            (Natural)
+import Protop.Core.Compositions
+import Protop.Core.Exponentials
+import Protop.Core.Morphisms
+import Protop.Core.Objects
+import Protop.Core.Products
+import Protop.Core.Proofs
+import Protop.Core.Setoids
+import Protop.Core.Symmetries
+import Protop.Core.Terminal
+import Protop.Core.Transitivities
 
 data N = N
 

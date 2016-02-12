@@ -4,15 +4,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Protop.Objects
+module Protop.Core.Objects
     ( IsObject(..)
     , Object(..)
     ) where
 
-import Data.Function  (on)
-import Data.Proxy     (Proxy(..))
-import Data.Typeable  (Typeable)
-import Protop.Setoids
+import Data.Function       (on)
+import Data.Proxy          (Proxy(..))
+import Data.Typeable       (Typeable)
+import Protop.Core.Setoids
 
 class ( Show x
       , Typeable x

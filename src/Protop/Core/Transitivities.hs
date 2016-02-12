@@ -3,13 +3,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Protop.Transitivities
+module Protop.Core.Transitivities
     ( (:>)(..)
     ) where
 
-import Data.Proxy     (Proxy(..))
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy          (Proxy(..))
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 infixl 9 :>
 

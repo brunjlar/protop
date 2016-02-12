@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 
-module Protop.Morphisms
+module Protop.Core.Morphisms
     ( IsMorphism(..)
     , DSource
     , DTarget
@@ -19,11 +19,11 @@ module Protop.Morphisms
     , apply
     ) where
 
-import Data.Function  (on)
-import Data.Proxy     (Proxy(..))
-import Data.Typeable  (Typeable, cast)
-import Protop.Objects
-import Protop.Setoids
+import Data.Function       (on)
+import Data.Proxy          (Proxy(..))
+import Data.Typeable       (Typeable, cast)
+import Protop.Core.Objects
+import Protop.Core.Setoids
 
 class ( Show a 
       , Typeable a

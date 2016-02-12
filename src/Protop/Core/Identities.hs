@@ -3,18 +3,18 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Protop.Identities
+module Protop.Core.Identities
     ( Id(..)
     , IDLEFT(..)
     , IDRIGHT(..)
     ) where
 
-import Data.Proxy          (Proxy(..))
-import Protop.Compositions
-import Protop.Objects
-import Protop.Morphisms
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy               (Proxy(..))
+import Protop.Core.Compositions
+import Protop.Core.Objects
+import Protop.Core.Morphisms
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 data Id :: * -> * where
     Id :: IsObject a => a -> Id a

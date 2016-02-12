@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Protop.Equalizers
+module Protop.Core.Equalizers
     ( (:==)(..)
     , Inj(..)
     , INJ(..)
@@ -13,13 +13,13 @@ module Protop.Equalizers
     , MONOINJ(..)
     ) where
 
-import Data.Proxy            (Proxy(..))
-import Protop.Compositions
-import Protop.Monos
-import Protop.Morphisms
-import Protop.Objects
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy               (Proxy(..))
+import Protop.Core.Compositions
+import Protop.Core.Monos
+import Protop.Core.Morphisms
+import Protop.Core.Objects
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 type CEql f g = ( IsMorphism f
                 , IsMorphism g

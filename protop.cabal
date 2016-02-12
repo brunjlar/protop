@@ -15,22 +15,23 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Protop
-                     , Protop.Compositions
-                     , Protop.Equalizers
-                     , Protop.Exponentials
-                     , Protop.Identities
-                     , Protop.Monos
-                     , Protop.Morphisms
-                     , Protop.Natural
-                     , Protop.Objects
-                     , Protop.Omega
-                     , Protop.Products
-                     , Protop.Proofs
-                     , Protop.Reflexivities
-                     , Protop.Setoids
-                     , Protop.Symmetries
-                     , Protop.Terminal
-                     , Protop.Transitivities
+                     , Protop.Core
+                     , Protop.Core.Compositions
+                     , Protop.Core.Equalizers
+                     , Protop.Core.Exponentials
+                     , Protop.Core.Identities
+                     , Protop.Core.Monos
+                     , Protop.Core.Morphisms
+                     , Protop.Core.Natural
+                     , Protop.Core.Objects
+                     , Protop.Core.Omega
+                     , Protop.Core.Products
+                     , Protop.Core.Proofs
+                     , Protop.Core.Reflexivities
+                     , Protop.Core.Setoids
+                     , Protop.Core.Symmetries
+                     , Protop.Core.Terminal
+                     , Protop.Core.Transitivities
                      , Protop.Utility
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
@@ -44,8 +45,8 @@ test-suite protop-test
   build-depends:       base >= 4.7 && < 5
                      , hspec
                      , protop
-  other-modules:       Protop.NaturalSpec
-                     , Protop.OmegaSpec
+  other-modules:       Protop.Core.NaturalSpec
+                     , Protop.Core.OmegaSpec
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
 

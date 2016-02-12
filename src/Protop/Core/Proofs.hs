@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 
-module Protop.Proofs
+module Protop.Core.Proofs
     ( IsProof(..)
     , SOURCE
     , TARGET
@@ -17,12 +17,12 @@ module Protop.Proofs
     , PROOF(..)
     ) where
 
-import Data.Monoid      ((<>))
-import Data.Proxy       (Proxy(..))
-import Data.Typeable    (Typeable)
-import Protop.Morphisms
-import Protop.Objects
-import Protop.Setoids
+import Data.Monoid           ((<>))
+import Data.Proxy            (Proxy(..))
+import Data.Typeable         (Typeable)
+import Protop.Core.Morphisms
+import Protop.Core.Objects
+import Protop.Core.Setoids
 
 class ( Show p
       , Typeable p

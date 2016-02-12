@@ -5,7 +5,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Protop.Exponentials
+module Protop.Core.Exponentials
     ( (:->)(..)
     , Curry(..)
     , Uncurry(..)
@@ -15,13 +15,13 @@ module Protop.Exponentials
     , eval
     ) where
 
-import Data.Proxy        (Proxy(..))
-import Protop.Identities
-import Protop.Morphisms
-import Protop.Objects
-import Protop.Products
-import Protop.Proofs
-import Protop.Setoids
+import Data.Proxy             (Proxy(..))
+import Protop.Core.Identities
+import Protop.Core.Morphisms
+import Protop.Core.Objects
+import Protop.Core.Products
+import Protop.Core.Proofs
+import Protop.Core.Setoids
 
 infixr 1 :->
 
