@@ -7,6 +7,8 @@
 {-# Language StandaloneDeriving #-}
 {-# Language TypeOperators #-}
 
+-- | This module defines /setoids/, which are types with an associated
+-- "explicit equality".
 module Protop.Core.Setoids
     ( IsSetoid(..)
     , Functoid(..)
@@ -33,18 +35,46 @@ import Data.Proxy      (Proxy(..))
 import Data.Typeable   (Typeable)
 import Numeric.Natural (Natural)
 
+-- | /Setoids/ are instances of the class 'IsSetoid'. This is a type
+-- with an associated concept of "explicit equality".
 class (Typeable a, Typeable (Proofs a)) => IsSetoid a where
 
+    -- | The 'Proofs' of a setoid can be thought of as
+    -- certificates for the "equality" of two elements.
     type Proofs a
     
+    -- | For each element of a setoid, there is a proof that this
+    -- element equals itself.
     reflexivity  :: a -> Proofs a
+
+    -- | If we have a proof of @x = y@, then we should also have
+    -- a proof of @y = x@.
     symmetry     :: Proxy a -> Proofs a -> Proofs a
+
+    -- | If @x = y@ and @y = z@, then @x = z@ should also hold.
+    -- Note that this is only a partial function (not any two arbitrary
+    -- proofs fit together in this way), but this fact can't be expressed
+    -- in the Haskell type system (or at least I don't know how...).
     transitivity :: Proxy a -> Proofs a -> Proofs a -> Proofs a
+
+    -- | A proof "knows" the equality of /which/ two elements it proves.
+    -- 'setLhs' gives the left-hand side of the proof...
     setLhs       :: Proofs a -> a
+
+    -- | ...and 'setRhs' gives the right-hand side.
     setRhs       :: Proofs a -> a
 
+-- | After having defined /setoids/, we need a proper notion of "functions"
+-- between such setoids. Just plain old functions won't do; instead
+-- we must insist that our functions "respect" the "explicit equality"
+-- on setoids given by their 'Proofs'. This means that a "proper" function
+-- between setoids must map "equal" elements to "equal" elements.
+-- I decided to call such a function a 'Functoid'. A @'Functoid' a b@
+-- is an explicit-equality respecting function from setoid @a@ to
+-- setoid @b@.
 data Functoid :: * -> * -> * where
-    Functoid :: (IsSetoid a, IsSetoid b) => (a -> b) -> (Proofs a -> Proofs b) -> Functoid a b
+    Functoid :: (IsSetoid a, IsSetoid b)
+                => (a -> b) -> (Proofs a -> Proofs b) -> Functoid a b
 
 onPoints :: Functoid a b -> a -> b
 onPoints (Functoid f _) = f

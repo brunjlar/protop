@@ -4,6 +4,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
+-- | This module defines /objects/ as instances of the typeclass
+-- 'IsObject'. Basically, an object is just a type with an associated
+-- /setoid/ (i.e. an instance of 'IsSetoid').
 module Protop.Core.Objects
     ( IsObject(..)
     , Object(..)
