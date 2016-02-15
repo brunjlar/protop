@@ -1,5 +1,5 @@
 module Protop
-    ( module X
+    ( module Protop.Indexed
     ) where
 
-import Protop.Core as X
+import Protop.Indexed

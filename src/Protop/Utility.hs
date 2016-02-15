@@ -1,12 +1,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE PolyKinds #-}
 
 module Protop.Utility
-    ( eqT'
+    ( Typeable
+    , (:~:)(..)
+    , typeRep
+    , eqT
+    , eqT'
     , eqT''
+    , decEq
     ) where
 
-import Data.Maybe    (fromMaybe)
+import Data.Maybe    (fromMaybe, isJust)
 import Data.Proxy    (Proxy(..))
 import Data.Typeable (Typeable, (:~:)(..), eqT, typeRep)
 
@@ -24,3 +30,6 @@ eqT'' pa pb = fromMaybe
                     show (typeRep pa) ++ " and " ++
                     show (typeRep pb))
                 eqT 
+
+decEq :: forall a b. (Typeable a, Typeable b) => a -> b -> Bool
+decEq _ _ = isJust (eqT :: Maybe (a :~: b))

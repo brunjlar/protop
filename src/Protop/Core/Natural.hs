@@ -46,7 +46,7 @@ data Zero = Zero
 
 instance Show Zero where
 
-    show Zero = "Zero"
+    show Zero = "zero"
 
 instance IsMorphism Zero where
 
@@ -59,7 +59,7 @@ data Succ = Succ
 
 instance Show Succ where
 
-    show Succ = "Succ"
+    show Succ = "succ"
 
 instance IsMorphism Succ where
 

@@ -25,7 +25,6 @@ module Protop.Core.Monos
     ) where
 
 import Data.Proxy                 (Proxy(..))
-import Data.Typeable              ((:~:)(..))
 import Protop.Core.Compositions
 import Protop.Core.Identities
 import Protop.Core.Objects
