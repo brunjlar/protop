@@ -33,6 +33,7 @@ library
                      , Protop.Core.Terminal
                      , Protop.Core.Transitivities
                      , Protop.Logic
+                     , Protop.Logic.Model
                      , Protop.Logic.Types
                      , Protop.Utility
   ghc-options:         -Wall
