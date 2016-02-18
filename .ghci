@@ -1,1 +1,3 @@
 :set -itest
+:set -XTypeOperators
+:set -XDataKinds

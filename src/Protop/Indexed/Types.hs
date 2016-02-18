@@ -1,37 +1,40 @@
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.Normalise #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE KindSignatures #-}
 
 module Protop.Indexed.Types
     ( Kind(..)
-    , Sig'
+    , HasKindRep(..)
+    , Sig
+    , Entity
+    , Scope
+    , empty
+    , cons'
+    , cons
     , objS
+    , morS'
     , morS
+    , prfS'
+    , prfS
+    , lamS'
     , lamS
-    , Entity'
     , var
-    , axiomObj
-    , axiomMor
-    , axiomLam
-    , toObject
-    , source
-    , target
-    , lhs
-    , rhs
+    , lft
+    , lft'
+    , lam'
+    , lam
+    , app'
+    , app
+    , scopeS
+    , scopeSIG
+    , scope
     , sig
-    , show'
     ) where
 
-import           Data.Proxy      (Proxy(..))
-import           Data.Typeable   (Typeable, eqT, (:~:)(..))
-import           GHC.TypeLits
-import           Numeric.Natural (Natural)
-import qualified Protop.Core     as C
+import Data.Maybe      (fromJust)
+import Data.Proxy      (Proxy(..))
+import Data.Typeable   (Typeable, cast, TypeRep, typeRep)
+import Numeric.Natural (Natural)
 
 data Kind =
     OBJ
@@ -39,147 +42,226 @@ data Kind =
   | PRF
   | LAM Kind Kind deriving (Show, Eq)
 
-class HasLevel a where
+class HasKindRep a where
 
-    level :: a -> Natural
+    kindRep :: a -> TypeRep
 
-data Sig' :: Nat -> Kind -> * where
+data Sig :: Kind -> * where
 
-    ObjS :: Natural -> Sig' n 'OBJ
-    MorS :: Entity' n 'OBJ -> Entity' n 'OBJ -> Sig' n 'MOR
-    PrfS :: Entity' n 'MOR -> Entity' n 'MOR -> Sig' n 'PRF
-    LamS :: (Typeable k, Typeable k') =>
-            Sig' n k -> Sig' (n + 1) k' -> Sig' n ('LAM k k')
+    ObjS :: Scope -> Sig 'OBJ 
 
-objS :: forall n. KnownNat n => Sig' n 'OBJ
-objS = ObjS $ fromInteger $ natVal (Proxy :: Proxy n)
+    MorS :: Entity 'OBJ -> Entity 'OBJ -> Sig 'MOR
 
-morS :: Entity' n 'OBJ -> Entity' n 'OBJ -> Sig' n 'MOR
-morS = MorS
+    PrfS :: Entity 'MOR -> Entity 'MOR -> Sig 'PRF
 
-lamS :: (Typeable k, Typeable k') =>
-        Sig' n k -> Sig' (n + 1) k' -> Sig' n ('LAM k k') 
-lamS = LamS
+    LamS :: (Typeable k, Typeable k') => Sig k -> Sig k' -> Sig ('LAM k k')
 
-instance HasLevel (Sig' n k) where
+instance HasKindRep (Sig k) where
 
-    level (ObjS n) = n
-    level (MorS x _) = level x
-    level (PrfS f _) = level f
-    level (LamS s _) = level s
+    kindRep (ObjS _)   = typeRep (Proxy :: Proxy k)
+    kindRep (MorS _ _) = typeRep (Proxy :: Proxy k)
+    kindRep (PrfS _ _) = typeRep (Proxy :: Proxy k)
+    kindRep (LamS _ _) = typeRep (Proxy :: Proxy k)
 
-instance Show (Sig' n k) where
+instance Eq (Sig k) where
 
-    show (ObjS _  ) = "Ob"
-    show (MorS x y) = show x ++ " -> " ++ show y
-    show (PrfS f g) = show f ++ " == " ++ show g ++ " :: " ++ show (sig f)
-    show (LamS s t) = "(" ++ show' (Var s) ++ ") ~> " ++ show t
+    ObjS s   == ObjS s'    = s == s'
+    MorS x y == MorS x' y' = x == x' && y == y'
+    PrfS f g == PrfS f' g' = f == f' && g == g'
+    LamS s t == LamS s' t' = s == s' && t == t'
+    _        == _          = False
 
-instance Eq (Sig' n k) where
+instance Show (Sig k) where
 
-    s == s' = show s == show s'
+    show (ObjS _)   = "Ob"
+    show (MorS x y) = "(" ++ show x ++ " -> " ++ show y ++ ")"
+    show (PrfS f g) = "(" ++ show f ++ " == " ++ show g ++ ")"
+    show (LamS s t) = let Scope sc = scopeS s
+                      in  "(\\(%" ++ show (1 + length sc) ++ " :: "
+                          ++ show s ++ ") -> " ++ show t ++ ")"
 
-data Entity' :: Nat -> Kind -> * where
+scopeS :: Sig k -> Scope
+scopeS (ObjS s)   = s
+scopeS (MorS x _) = scope  x
+scopeS (PrfS f _) = scope  f
+scopeS (LamS s _) = scopeS s
 
-    AxiomObj :: C.IsObject   x => x -> Entity' 0 'OBJ
-    AxiomMor :: C.IsMorphism f => f -> Entity' 0 'MOR
-    AxiomPrf :: C.IsProof    p => p -> Entity' 0 'PRF
-    AxiomLam :: (Typeable k, Typeable k') =>
-                String -> Sig' n k -> Sig' (n + 1) k' ->
-                (Entity' n k -> Entity' n k') -> Entity' n ('LAM k k')
-    Lft      :: Typeable k => Entity' n k -> Entity' (n + 1) k
-    Var      :: Typeable k => Sig' n k -> Entity' (n + 1) k
-    App      :: (Typeable k, Typeable k') =>
-                Entity' n ('LAM k k') -> Entity' n k -> Entity' n k'
-    Lam      :: (Typeable k, Typeable k') =>
-                Sig' n k -> Entity' (n + 1) k' -> Entity' n ('LAM k k')
+data SIG :: * where
 
-var :: Typeable k => Sig' n k -> Entity' (n + 1) k
+    SIG :: Typeable k => Sig k -> SIG
+
+instance HasKindRep SIG where
+
+    kindRep (SIG s) = kindRep s
+
+instance Eq SIG where
+
+    SIG s == SIG t = case cast s of
+                        Just s' -> s' == t
+                        Nothing -> False
+
+instance Show SIG where
+
+    show (SIG s) = show s
+
+scopeSIG :: SIG -> Scope
+scopeSIG (SIG s) = scopeS s
+
+newtype Scope = Scope [SIG] deriving (Show, Eq)
+
+empty :: Scope
+empty = Scope []
+
+cons' :: SIG -> Scope -> Maybe Scope
+cons' s sc
+    | scopeSIG s == sc = let Scope sc' = sc in Just $ Scope $ s : sc'
+    | otherwise        = Nothing
+
+cons :: SIG -> Scope -> Scope
+cons s sc = fromJust $ cons' s sc
+
+data Entity :: Kind -> * where
+
+    Var :: Typeable k => Sig k -> Entity k
+    Lft :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Entity k' 
+    Lam :: (Typeable k, Typeable k') => Proxy k -> Entity k' -> Entity ('LAM k k')
+    App :: (Typeable k, Typeable k') => Entity ('LAM k k') -> Entity k -> Entity k'
+
+instance HasKindRep (Entity k) where
+
+    kindRep (Var _)   = typeRep (Proxy :: Proxy k)
+    kindRep (Lft _ _) = typeRep (Proxy :: Proxy k)
+    kindRep (Lam _ _) = typeRep (Proxy :: Proxy k)
+    kindRep (App _ _) = typeRep (Proxy :: Proxy k)
+
+instance Eq (Entity k) where
+
+    Var s   == Var s'    = s == s'
+    Lft s e == Lft s' e' = SIG s == SIG s' && e == e'
+    Lam _ e == Lam _  e' = e == e'
+    App f e == App f' e' = case (cast f', cast e') of
+                                (Just f'', Just e'') -> f == f'' && e == e''
+                                _                    -> False
+    _       == _         = False
+
+instance Show (Entity k) where
+
+    show (Var s)   = let Scope sc = scopeS s in "%" ++ show (1 + length sc)
+    show (Lft _ e) = show e
+    show (Lam _ e) = let Scope sc = scope e
+                     in  "(\\(%" ++ show (length sc) ++ " :: "
+                         ++ show (head sc) ++ ") -> " ++ show e ++ ")"
+    show (App f e) = "(" ++ show f ++ " " ++ show e ++ ")"
+
+scope :: Entity k -> Scope
+scope (Var s)   = cons (SIG s) $ scopeS s
+scope (Lft s e) = cons (SIG s) $ scope  e
+scope (Lam _ e) = let Scope sc = scope  e in Scope $ tail sc
+scope (App f _) = scope f
+
+objS :: Scope -> Sig 'OBJ
+objS = ObjS
+
+morS' :: Entity 'OBJ -> Entity 'OBJ -> Maybe (Sig 'MOR)
+morS' x y
+    | scope x == scope y = Just $ MorS x y
+    | otherwise          = Nothing
+
+morS :: Entity 'OBJ -> Entity 'OBJ -> Sig 'MOR
+morS x y = fromJust $ morS' x y
+
+prfS' :: Entity 'MOR -> Entity 'MOR -> Maybe (Sig 'PRF)
+prfS' f g
+    | sig f == sig g = Just $ PrfS f g
+    | otherwise      = Nothing
+
+prfS :: Entity 'MOR -> Entity 'MOR -> Sig 'PRF
+prfS f g = fromJust $ prfS' f g
+
+lamS' :: (Typeable k, Typeable k') => Proxy k -> Sig k' -> Maybe (Sig ('LAM k k'))
+lamS' _ t = case scopeS t of
+                Scope []      -> Nothing
+                Scope (s : _) -> case s of SIG s' -> case cast s' of
+                                                        Just s'' -> Just $ LamS s'' t
+                                                        Nothing  -> Nothing
+
+lamS :: (Typeable k, Typeable k') => Proxy k -> Sig k' -> Sig ('LAM k k')
+lamS p t = fromJust $ lamS' p t
+
+var :: Typeable k => Sig k -> Entity k
 var = Var
 
-axiomObj :: C.IsObject x => x -> Entity' 0 'OBJ
-axiomObj = AxiomObj
+lft' :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Maybe (Entity k')
+lft' s e
+    | scopeS s == scope e = Just $ Lft s e
+    | otherwise           = Nothing
 
-axiomMor :: C.IsMorphism f => f -> Entity' 0 'MOR
-axiomMor = AxiomMor
+lft :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Entity k'
+lft s e = fromJust $ lft' s e
 
-axiomLam :: (Typeable k, Typeable k') =>
-            String -> Sig' n k -> Sig' (n + 1) k' ->
-            (Entity' n  k -> Entity' n k') -> Entity' n ('LAM k k')
-axiomLam = AxiomLam
+lam' :: (Typeable k, Typeable k') => Proxy k -> Entity k' -> Maybe (Entity ('LAM k k'))
+lam' p e = case scope e of
+                Scope []                     -> Nothing
+                Scope (s : _)
+                    | typeRep p == kindRep s -> Just $ Lam p e
+                    | otherwise              -> Nothing
 
-toObject :: Entity' 0 'OBJ -> C.Object
-toObject (AxiomObj x) = C.Object x
-toObject _            = error "impossible case"
+lam :: (Typeable k, Typeable k') => Proxy k -> Entity k' -> Entity ('LAM k k')
+lam p e = fromJust $ lam' p e
 
-instance HasLevel (Entity' n k) where
+app' :: (Typeable k, Typeable k') => Entity ('LAM k k') -> Entity k -> Maybe (Entity k')
+app' f e
+    | scope f /= scope e = Nothing
+    | otherwise          =
+        case sig f of
+            LamS s _ -> if sig e == s
+                            then Just $ App f e
+                            else Nothing
 
-    level (AxiomObj _)       = 0
-    level (AxiomMor _)       = 0
-    level (AxiomPrf _)       = 0
-    level (AxiomLam _ s _ _) = level s
-    level (Lft e)            = 1 + level e
-    level (Var s)            = 1 + level s
-    level (App s _)          = level s
-    level (Lam s _)          = level s
+app :: (Typeable k, Typeable k') => Entity ('LAM k k') -> Entity k -> Entity k'
+app f e = fromJust $ app' f e
 
-instance Show (Entity' n k) where
+insertSc :: Typeable k => Natural -> Sig k -> Scope -> Scope
+insertSc 0 s sc               = cons (SIG s) sc
+insertSc n s (Scope (t : ts)) = cons t $ insertSc (n - 1) s $ Scope ts
+insertSc _ _ (Scope [])       = error "can't insert into empty scope"
 
-    show (AxiomObj x)       = show x
-    show (AxiomMor f)       = show f
-    show (AxiomPrf p)       = show p
-    show (AxiomLam c _ _ _) = c
-    show (Lft e)            = show e
-    show (Var v)            = "%" ++ (show $ succ $ level v)
-    show (App e e')         = "(" ++ show e ++ " " ++ show e' ++ ")"
-    show (Lam s e)          = "(\\(%" ++ (show $ level e) ++ " :: " ++
-                              show s ++ ") -> " ++ show e ++ ")"
+insertS :: Typeable k => Natural -> Sig k -> Sig k' -> Sig k'
+insertS n s (ObjS sc)  = ObjS (insertSc n s sc)
+insertS n s (MorS x y) = MorS (insert   n s x) (insert  n       s y)
+insertS n s (PrfS f g) = PrfS (insert   n s f) (insert  n       s g)
+insertS n s (LamS u v) = LamS (insertS  n s u) (insertS (n + 1) s v)
 
-source, target :: Entity' n 'MOR -> Entity' n 'OBJ
-source f = let MorS s _ = sig f in s
-target f = let MorS _ t = sig f in t
+insert :: (Typeable k, Typeable k') => Natural -> Sig k -> Entity k' -> Entity k'
+insert 0 s e         = Lft s e
+insert n s (Var t)   = Var   (insertS (n - 1) s t)
+insert n s (Lft t e) = Lft t (insert  (n - 1) s e)
+insert n s (Lam p e) = Lam p (insert  (n + 1) s e)
+insert n s (App f e) = App (insert n s f) (insert n s e)
 
-lhs, rhs :: Entity' n 'PRF -> Entity' n 'MOR
-lhs p = let PrfS l _ = sig p in l
-rhs p = let PrfS _ r = sig p in r
+substSC :: Natural -> Scope -> Scope
+substSC 0 (Scope (_ : sc)) = Scope sc
+substSC n (Scope (s : sc)) = cons s $ substSC (n - 1) $ Scope sc
+substSC _ (Scope [])       = error "can't substitute in empty scope"
 
-lftS :: Sig' n k -> Sig' (n + 1) k
-lftS (ObjS n  ) = ObjS (n + 1)
-lftS (MorS x y) = MorS (Lft x) (Lft y)
-lftS (PrfS f g) = PrfS (Lft f) (Lft g)
-lftS (LamS s t) = LamS (lftS s) (lftS t)
+substS :: Typeable k => Natural -> Entity k -> Sig k' -> Sig k'
+substS n _ (ObjS sc)  = ObjS (substSC n sc) 
+substS n e (MorS x y) = MorS (subst  n e x) (subst  n       e y)
+substS n e (PrfS f g) = PrfS (subst  n e f) (subst  n       e g)
+substS n e (LamS s t) = LamS (substS n e s) (substS (n + 1) e t)
 
-substS :: forall n k k'. (Typeable k, Typeable k') =>
-          Sig' (n + 1) k -> Entity' n k' -> Sig' n k
-substS (ObjS n')   _ = ObjS (n' - 1) 
-substS (MorS x y)  e = MorS (substE x e) (substE y e)
-substS (PrfS f g)  e = PrfS (substE f e) (substE g e)
-substS (LamS s s') e = LamS (substS s e) (substS s' $ Lft e)
+subst :: Typeable k => Natural -> Entity k -> Entity k' -> Entity k'
+subst 0 e (Var _)   = fromJust $ cast e
+subst n e (Var s)   = Var (substS (n - 1) e s)
+subst 0 _ (Lft _ f) = f
+subst n e (Lft s f) = Lft s (subst (n - 1) e f)
+subst n e (Lam p f) = Lam p (subst (n + 1) e f)
+subst n e (App f g) = App (subst n e f) (subst n e g)
 
-substE :: forall n k k'. (Typeable k, Typeable k') =>
-          Entity' (n + 1) k -> Entity' n k' -> Entity' n k
-substE (Lft e)       _ = e
-substE (Var s)       f =
-    case eqT :: Maybe (k :~: k') of
-        Just Refl -> f
-        Nothing   -> error $ "can't substitute " ++ show' f ++ " for " ++
-                             show' (Var s)
-substE (Lam s e)  f  = Lam (substS s f) (substE e $ Lft f) 
-substE (App e e') f  = App (substE e f) (substE e' f)
-substE e          f  = error $ "can't substitue " ++ show' f ++ " for " ++
-                               show' e
-
-sig :: Entity' n k -> Sig' n k
-sig e@(AxiomObj _)       = ObjS (level e)
-sig   (AxiomMor f)       = MorS (AxiomObj $ C.source f)
-                                (AxiomObj $ C.target f)
-sig   (AxiomPrf p)       = PrfS (AxiomMor $ C.lhs    p)
-                                (AxiomMor $ C.rhs    p)
-sig   (AxiomLam _ s t _) = LamS s t
-sig   (Lft e)            = lftS (sig e)
-sig   (Var s)            = lftS s
-sig   (App e e')         = case sig e of LamS _ s -> substS s e'
-sig   (Lam s e)          = LamS s (sig e)
-
-show' :: Entity' n k -> String
-show' e = show e ++ " :: " ++ show (sig e)
+sig :: Entity k -> Sig k
+sig (Var s)   = insertS 0 s s
+sig (Lft s e) = insertS 0 s $ sig e
+sig (Lam _ e) = LamS s (sig e) where
+    Scope sc = scope e
+    s = case head sc of SIG s' -> fromJust $ cast s'
+sig (App f e) = case sig f of LamS _ t -> substS 0 e t
