@@ -12,6 +12,7 @@ spec = do
     objSSpec
     morSSpec
     prfSSpec
+    lamSSpec
 
 objSSpec :: Spec
 objSSpec = describe "objS" $
@@ -48,7 +49,26 @@ prfSSpec = describe "prfS" $
             s  = prfS (lft sg f) g
 
         show s    `shouldBe` "(%3 == %4)"
-        scopeS s  `shouldBe` (cons (SIG sg) $ cons (SIG sf) $ cons (SIG sy) $ cons (SIG sx) empty)
+        scopeS s  `shouldBe` (cons (SIG sg) $ cons (SIG sf) $
+                              cons (SIG sy) $ cons (SIG sx) empty)
         kindRep s `shouldBe` typeRep (Proxy :: Proxy 'PRF)
 
+lamSSpec :: Spec
+lamSSpec = describe "lamS" $
 
+    it "should create a simple lambda signature" $ do
+        let s = prodSig
+
+        show s    `shouldBe` "(\\(%1 :: Ob) -> (\\(%2 :: Ob) -> Ob))"
+        scopeS s  `shouldBe` empty
+        kindRep s `shouldBe` typeRep (Proxy :: Proxy ('LAM 'OBJ ('LAM 'OBJ 'OBJ)))
+
+prodSig :: Sig ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
+prodSig = let sx = objS empty
+              x  = var sx
+              sy = objS (scope x)
+              y  = var sy
+              sp = objS (scope y)
+              l1 = lamS (Proxy :: Proxy 'OBJ) sp
+              l2 = lamS (Proxy :: Proxy 'OBJ) l1
+          in  l2
