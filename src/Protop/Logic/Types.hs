@@ -1,11 +1,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DataKinds #-}
 
-module Protop.Indexed.Types
+module Protop.Logic.Types
     ( Kind(..)
     , HasKindRep(..)
     , Sig
+    , SIG(..)
     , Entity
     , Scope
     , empty

@@ -1,5 +1,7 @@
 module Protop
-    ( module Protop.Indexed
+    ( module Protop.Core
+    , module Protop.Logic
     ) where
 
-import Protop.Indexed
+import Protop.Core
+import Protop.Logic
