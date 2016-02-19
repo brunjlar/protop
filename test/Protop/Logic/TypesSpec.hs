@@ -92,11 +92,15 @@ appSpec = describe "app" $ do
     it "should create an application resulting in an object" $ do
         let p   = var prodSig
             l   = lft prodSig xxEntity
-            lp  = app l p
+        putStrLn $ "xe  = " ++ show xxEntity  ++ "(" ++ show (scope xxEntity)  ++ ")"
+        putStrLn $ "xe' = " ++ show l         ++ "(" ++ show (scope l)         ++ ")"
+        let lp  = app l p
             sx  = objS $ scope lp
             x   = var sx
             lp' = lft sx lp 
-            lpx = app lp' x
+        putStrLn $ "lp  = " ++ show lp  ++ "(" ++ show (scope lp)  ++ ")"
+        putStrLn $ "lp' = " ++ show lp' ++ "(" ++ show (scope lp') ++ ")"
+        let lpx = app lp' x
         show lpx       `shouldBe` "(((\\(%1 :: (\\(%1 :: Ob) -> (\\(%2 :: Ob) -> Ob))) -> " ++
                                   "(\\(%2 :: Ob) -> ((%1 %2) %2))) %1) %2)"
         show (sig lpx) `shouldBe` "Ob"
@@ -130,6 +134,13 @@ appSpec = describe "app" $ do
         show f       `shouldBe` "(%2 ((%3 %1) %1))"
         show (sig f) `shouldBe` "(((%3 %1) %1) -> ((%3 %1) %1))"
         kindRep f    `shouldBe` typeRep (Proxy :: Proxy 'MOR)
+
+    it "should use beta reduction" $ do
+
+        let p  = var prodSig
+            q  = lft prodSig xxEntity
+            l  = q `app` p
+        show l `shouldBe` ""
 
 prodSig :: Sig ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
 prodSig = let sx = objS empty
