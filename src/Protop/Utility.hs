@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Protop.Utility
     ( Typeable
@@ -11,6 +12,7 @@ module Protop.Utility
     , eqT''
     , decEq
     , fromRight
+    , (:++)
     ) where
 
 import Data.Maybe    (fromMaybe, isJust)
@@ -38,3 +40,8 @@ decEq _ _ = isJust (eqT :: Maybe (a :~: b))
 fromRight :: Either String a -> a
 fromRight (Right x) = x
 fromRight (Left e)  = error e
+
+type family (:++) (xs :: [k]) (ys :: [k]) :: [k] where
+
+    '[]       :++ ys = ys
+    (x ': xs) :++ ys = x ': (xs :++ ys)
