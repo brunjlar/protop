@@ -11,7 +11,6 @@ module Protop.Logic.Types
     , Entity
     , Scope
     , empty
-    , cons'
     , cons
     , objS
     , morS'
@@ -116,13 +115,8 @@ newtype Scope = Scope [SIG] deriving (Show, Eq)
 empty :: Scope
 empty = Scope []
 
-cons' :: SIG -> Scope -> Either String Scope
-cons' s sc
-    | scopeSIG s == sc = let Scope sc' = sc in Right $ Scope $ s : sc'
-    | otherwise        = Left $ "can't cons " ++ show s ++ " on " ++ show sc
-
-cons :: SIG -> Scope -> Scope
-cons s sc = fromRight $ cons' s sc
+cons :: SIG -> Scope
+cons s = let Scope sc = scopeSIG s in Scope (s : sc)
 
 data Entity :: Kind -> * where
 
@@ -158,8 +152,8 @@ instance Show (Entity k) where
     show (App f e) = "(" ++ show f ++ " " ++ show e ++ ")"
 
 scope :: Entity k -> Scope
-scope (Var s)   = cons (SIG s) $ scopeS s
-scope (Lft s e) = cons (SIG s) $ scope  e
+scope (Var s)   = cons (SIG s)
+scope (Lft s e) = cons (SIG s)
 scope (Lam _ e) = let Scope sc = scope  e in Scope $ tail sc
 scope (App f _) = scope f
 
@@ -255,9 +249,9 @@ app :: (Typeable k, Typeable k') => Entity ('LAM k k') -> Entity k -> Entity k'
 app f e = fromRight $ app' f e
 
 insertSc :: Typeable k => Natural -> Sig k -> Scope -> Scope
-insertSc 0 s sc               = cons (SIG s) sc
-insertSc n s (Scope (t : ts)) = cons t $ insertSc (n - 1) s $ Scope ts
-insertSc _ _ (Scope [])       = error "can't insert into empty scope"
+insertSc 0 s sc                   = cons (SIG s)
+insertSc n s (Scope (SIG t : ts)) = cons $ SIG $ insertS (n - 1) s t
+insertSc _ _ (Scope [])           = error "can't insert into empty scope"
 
 insertS :: Typeable k => Natural -> Sig k -> Sig k' -> Sig k'
 insertS n s (ObjS sc)  = ObjS (insertSc n s sc)
@@ -272,16 +266,16 @@ insert n s (Lft t e) = Lft t (insert  (n - 1) s e)
 insert n s (Lam p e) = Lam p (insert  (n + 1) s e)
 insert n s (App f e) = App (insert n s f) (insert n s e)
 
-substSC :: Natural -> Scope -> Scope
-substSC 0 (Scope (_ : sc)) = Scope sc
-substSC n (Scope (s : sc)) = cons s $ substSC (n - 1) $ Scope sc
-substSC _ (Scope [])       = error "can't substitute in empty scope"
+substSC :: Typeable k => Natural -> Entity k -> Scope -> Scope
+substSC 0 e (Scope (_ : sc)) = Scope sc
+substSC n e (Scope (s : sc)) = error "substSc not yet implemented" --cons s $ substSC (n - 1) $ Scope sc
+substSC _ e (Scope [])       = error "can't substitute in empty scope"
 
 substS :: Typeable k => Natural -> Entity k -> Sig k' -> Sig k'
-substS n _ (ObjS sc)  = ObjS (substSC n sc) 
-substS n e (MorS x y) = MorS (subst  n e x) (subst  n       e y)
-substS n e (PrfS f g) = PrfS (subst  n e f) (subst  n       e g)
-substS n e (LamS s t) = LamS (substS n e s) (substS (n + 1) e t)
+substS n e (ObjS sc)  = ObjS (substSC n e sc) 
+substS n e (MorS x y) = MorS (subst   n e x) (subst  n       e y)
+substS n e (PrfS f g) = PrfS (subst   n e f) (subst  n       e g)
+substS n e (LamS s t) = LamS (substS  n e s) (substS (n + 1) e t)
 
 subst :: Typeable k => Natural -> Entity k -> Entity k' -> Entity k'
 subst 0 e (Var _)   = fromJust $ cast e

@@ -14,7 +14,7 @@ spec = do
     prfSSpec
     lamSSpec
     varSpec
-    --lamSpec
+    lamSpec
 
 objSSpec :: Spec
 objSSpec = describe "objS" $
@@ -33,7 +33,7 @@ morSSpec = describe "morS" $
             v = var o
             s = morS v v
         show s    `shouldBe` "(%1 -> %1)"
-        scopeS s  `shouldBe` cons (SIG o) empty
+        scopeS s  `shouldBe` cons (SIG o)
         kindRep s `shouldBe` typeRep (Proxy :: Proxy 'MOR)
 
 prfSSpec :: Spec
@@ -51,8 +51,7 @@ prfSSpec = describe "prfS" $
             s  = prfS (lft sg f) g
 
         show s    `shouldBe` "(%3 == %4)"
-        scopeS s  `shouldBe` (cons (SIG sg) $ cons (SIG sf) $
-                              cons (SIG sy) $ cons (SIG sx) empty)
+        scopeS s  `shouldBe` (cons (SIG sg))
         kindRep s `shouldBe` typeRep (Proxy :: Proxy 'PRF)
 
 lamSSpec :: Spec
@@ -71,21 +70,27 @@ varSpec = describe "var" $ do
     it "should create a variable with lambda signature" $ do
         let sp = prodSig
             p  = var sp
-        (show' p) `shouldBe` "%1 :: (\\(%1 :: Ob) -> (\\(%2 :: Ob) -> Ob))"
+        (show' p) `shouldBe` "%1 :: (\\(%2 :: Ob) -> (\\(%3 :: Ob) -> Ob))"
 
 lamSpec :: Spec
 lamSpec = describe "lam" $ do
 
-    it "should create a simple lambda" $ do
+    it "should create a lambda" $ do
         let sp = prodSig
             p  = var sp
             sx = objS (scope p)
             x  = var sx
             p' = lft sx p
-            px = p' `app` x
-            spx = sig px
-            l  = px `app` x
-        show' (p' `app` x) `shouldBe` "XXX"
+            pxx = (p' `app` x) `app` x
+            l   = lam (Proxy :: Proxy 'OBJ) pxx
+            l'  = lam (Proxy :: Proxy ('LAM 'OBJ ('LAM 'OBJ 'OBJ))) l
+        show l'       `shouldBe` "(\\(%1 :: (\\(%1 :: Ob) -> (\\(%2 :: Ob) -> Ob))) -> " ++
+                                 "(\\(%2 :: Ob) -> ((%1 %2) %2)))"
+        show (sig l') `shouldBe` "(\\(%1 :: (\\(%1 :: Ob) -> (\\(%2 :: Ob) -> Ob))) -> " ++
+                                 "(\\(%2 :: Ob) -> Ob))"
+        scope l'      `shouldBe` empty
+        kindRep l'    `shouldBe` typeRep (Proxy :: Proxy ('LAM ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
+                                                         ('LAM 'OBJ 'OBJ)))
 
 prodSig :: Sig ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
 prodSig = let sx = objS empty
