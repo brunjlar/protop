@@ -22,6 +22,8 @@ module Protop.Logic.Types
     , var
     , lft
     , lft'
+    , lftS'
+    , lftS
     , lam'
     , lam
     , app'
@@ -267,9 +269,9 @@ insert n s (Lam p e) = Lam p (insert  (n + 1) s e)
 insert n s (App f e) = App (insert n s f) (insert n s e)
 
 substSC :: Typeable k => Natural -> Entity k -> Scope -> Scope
-substSC 0 e (Scope (_ : sc)) = Scope sc
-substSC n e (Scope (s : sc)) = error "substSc not yet implemented" --cons s $ substSC (n - 1) $ Scope sc
-substSC _ e (Scope [])       = error "can't substitute in empty scope"
+substSC 0 e (Scope (_     : sc)) = Scope sc
+substSC n e (Scope (SIG s : sc)) = cons $ SIG $ substS (n - 1) e s
+substSC _ e (Scope [])           = error "can't substitute in empty scope"
 
 substS :: Typeable k => Natural -> Entity k -> Sig k' -> Sig k'
 substS n e (ObjS sc)  = ObjS (substSC n e sc) 
@@ -292,6 +294,15 @@ sig (Lam _ e) = LamS s (sig e) where
     Scope sc = scope e
     s = case head sc of SIG s' -> fromJust $ cast s'
 sig (App f e) = case sig f of LamS _ t -> substS 0 e t
+
+lftS' :: Typeable k => Sig k -> Sig k' -> Either String (Sig k')
+lftS' s t
+    | scopeS s == scopeS t = Right $ insertS 0 s t
+    | otherwise            = Left  $ "can't add " ++ show s ++ " (scope " ++ show (scopeS s) ++
+                                     ") to " ++ show t ++ " (scope " ++ show (scopeS t) ++ ")"
+
+lftS :: Typeable k => Sig k -> Sig k' -> Sig k'
+lftS s t = fromRight $ lftS' s t
 
 show' :: Entity k -> String
 show' e = show e ++ " :: " ++ show (sig e)
