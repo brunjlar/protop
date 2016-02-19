@@ -10,6 +10,7 @@ module Protop.Utility
     , eqT'
     , eqT''
     , decEq
+    , fromRight
     ) where
 
 import Data.Maybe    (fromMaybe, isJust)
@@ -33,3 +34,7 @@ eqT'' pa pb = fromMaybe
 
 decEq :: forall a b. (Typeable a, Typeable b) => a -> b -> Bool
 decEq _ _ = isJust (eqT :: Maybe (a :~: b))
+
+fromRight :: Either String a -> a
+fromRight (Right x) = x
+fromRight (Left e)  = error e

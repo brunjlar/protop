@@ -13,6 +13,8 @@ spec = do
     morSSpec
     prfSSpec
     lamSSpec
+    varSpec
+    --lamSpec
 
 objSSpec :: Spec
 objSSpec = describe "objS" $
@@ -63,6 +65,28 @@ lamSSpec = describe "lamS" $
         scopeS s  `shouldBe` empty
         kindRep s `shouldBe` typeRep (Proxy :: Proxy ('LAM 'OBJ ('LAM 'OBJ 'OBJ)))
 
+varSpec :: Spec
+varSpec = describe "var" $ do
+
+    it "should create a variable with lambda signature" $ do
+        let sp = prodSig
+            p  = var sp
+        (show' p) `shouldBe` "%1 :: (\\(%1 :: Ob) -> (\\(%2 :: Ob) -> Ob))"
+
+lamSpec :: Spec
+lamSpec = describe "lam" $ do
+
+    it "should create a simple lambda" $ do
+        let sp = prodSig
+            p  = var sp
+            sx = objS (scope p)
+            x  = var sx
+            p' = lft sx p
+            px = p' `app` x
+            spx = sig px
+            l  = px `app` x
+        show' (p' `app` x) `shouldBe` "XXX"
+
 prodSig :: Sig ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
 prodSig = let sx = objS empty
               x  = var sx
@@ -72,3 +96,9 @@ prodSig = let sx = objS empty
               l1 = lamS (Proxy :: Proxy 'OBJ) sp
               l2 = lamS (Proxy :: Proxy 'OBJ) l1
           in  l2
+
+idSig :: Sig ('LAM 'OBJ 'MOR)
+idSig = let sx = objS empty
+            x  = var sx
+            sm = morS x x
+        in  lamS (Proxy :: Proxy 'OBJ) sm

@@ -31,12 +31,14 @@ module Protop.Logic.Types
     , scopeSIG
     , scope
     , sig
+    , show'
     ) where
 
 import Data.Maybe      (fromJust)
 import Data.Proxy      (Proxy(..))
 import Data.Typeable   (Typeable, cast, TypeRep, typeRep)
 import Numeric.Natural (Natural)
+import Protop.Utility  (fromRight)
 
 data Kind =
     OBJ
@@ -114,13 +116,13 @@ newtype Scope = Scope [SIG] deriving (Show, Eq)
 empty :: Scope
 empty = Scope []
 
-cons' :: SIG -> Scope -> Maybe Scope
+cons' :: SIG -> Scope -> Either String Scope
 cons' s sc
-    | scopeSIG s == sc = let Scope sc' = sc in Just $ Scope $ s : sc'
-    | otherwise        = Nothing
+    | scopeSIG s == sc = let Scope sc' = sc in Right $ Scope $ s : sc'
+    | otherwise        = Left $ "can't cons " ++ show s ++ " on " ++ show sc
 
 cons :: SIG -> Scope -> Scope
-cons s sc = fromJust $ cons' s sc
+cons s sc = fromRight $ cons' s sc
 
 data Entity :: Kind -> * where
 
@@ -164,64 +166,93 @@ scope (App f _) = scope f
 objS :: Scope -> Sig 'OBJ
 objS = ObjS
 
-morS' :: Entity 'OBJ -> Entity 'OBJ -> Maybe (Sig 'MOR)
+morS' :: Entity 'OBJ -> Entity 'OBJ -> Either String (Sig 'MOR)
 morS' x y
-    | scope x == scope y = Just $ MorS x y
-    | otherwise          = Nothing
+    | scope x == scope y = Right $ MorS x y
+    | otherwise          = Left $ "can't make morphism signature from " ++
+                                  show x ++ " (scope " ++ show (scope x) ++
+                                  ") and " ++
+                                  show y ++ " (scope " ++ show (scope y) ++ ")"
 
 morS :: Entity 'OBJ -> Entity 'OBJ -> Sig 'MOR
-morS x y = fromJust $ morS' x y
+morS x y = fromRight $ morS' x y
 
-prfS' :: Entity 'MOR -> Entity 'MOR -> Maybe (Sig 'PRF)
+prfS' :: Entity 'MOR -> Entity 'MOR -> Either String (Sig 'PRF)
 prfS' f g
-    | sig f == sig g = Just $ PrfS f g
-    | otherwise      = Nothing
+    | sig f == sig g = Right $ PrfS f g
+    | otherwise      = Left $ "can't make proof signature from " ++
+                              show' f ++ " and " ++ show' g
 
 prfS :: Entity 'MOR -> Entity 'MOR -> Sig 'PRF
-prfS f g = fromJust $ prfS' f g
+prfS f g = fromRight $ prfS' f g
 
-lamS' :: (Typeable k, Typeable k') => Proxy k -> Sig k' -> Maybe (Sig ('LAM k k'))
-lamS' _ t = case scopeS t of
-                Scope []      -> Nothing
-                Scope (s : _) -> case s of SIG s' -> case cast s' of
-                                                        Just s'' -> Just $ LamS s'' t
-                                                        Nothing  -> Nothing
+lamS' :: forall k k'.
+         ( Typeable k
+         , Typeable k'
+         ) => Proxy k -> Sig k' -> Either String (Sig ('LAM k k'))
+lamS' _ t =
+    case scopeS t of
+        Scope []      ->
+            Left "can't make lambda signature in empty scope"
+        Scope (s : _) ->
+            case s of
+                SIG s' ->
+                    case cast s' of
+                        Just s'' ->Right $ LamS s'' t
+                        Nothing  ->
+                            Left $ show t ++ " doesn't have argument kind "
+                                          ++ show (typeRep (Proxy :: Proxy k)) 
 
 lamS :: (Typeable k, Typeable k') => Proxy k -> Sig k' -> Sig ('LAM k k')
-lamS p t = fromJust $ lamS' p t
+lamS p t = fromRight $ lamS' p t
 
 var :: Typeable k => Sig k -> Entity k
 var = Var
 
-lft' :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Maybe (Entity k')
+lft' :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Either String (Entity k')
 lft' s e
-    | scopeS s == scope e = Just $ Lft s e
-    | otherwise           = Nothing
+    | scopeS s == scope e = Right $ Lft s e
+    | otherwise           = Left $ "can't lift " ++ show' e ++ " (scope " ++
+                                   show (scope e) ++ ") by signature " ++
+                                   show s ++ " (scope " ++ show (scopeS s) ++ ")"
 
 lft :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Entity k'
-lft s e = fromJust $ lft' s e
+lft s e = fromRight $ lft' s e
 
-lam' :: (Typeable k, Typeable k') => Proxy k -> Entity k' -> Maybe (Entity ('LAM k k'))
-lam' p e = case scope e of
-                Scope []                     -> Nothing
-                Scope (s : _)
-                    | typeRep p == kindRep s -> Just $ Lam p e
-                    | otherwise              -> Nothing
+lam' :: ( Typeable k
+        , Typeable k'
+        ) => Proxy k -> Entity k' -> Either String (Entity ('LAM k k'))
+lam' p e =
+    case scope e of
+        Scope []                     ->
+            Left $ "can't make lambda from " ++ show' e ++ " (empty scope)"
+        Scope (s : _)
+            | typeRep p == kindRep s ->
+                Right $ Lam p e
+            | otherwise              ->
+                Left $ "can't make lambda with argument kind " ++
+                       show (typeRep p) ++ " from " ++ show' e
 
 lam :: (Typeable k, Typeable k') => Proxy k -> Entity k' -> Entity ('LAM k k')
-lam p e = fromJust $ lam' p e
+lam p e = fromRight $ lam' p e
 
-app' :: (Typeable k, Typeable k') => Entity ('LAM k k') -> Entity k -> Maybe (Entity k')
+app' :: ( Typeable k
+        , Typeable k' 
+        ) => Entity ('LAM k k') -> Entity k -> Either String (Entity k')
 app' f e
-    | scope f /= scope e = Nothing
+    | scope f /= scope e =
+        Left $ "can't apply " ++ show' f ++ " (scope " ++ show (scope f) ++
+               ") to " ++ show' e ++ " (scope " ++ show (scope e)
     | otherwise          =
         case sig f of
-            LamS s _ -> if sig e == s
-                            then Just $ App f e
-                            else Nothing
+            LamS s _ ->
+                if sig e == s
+                    then Right $ App f e
+                    else Left $ "can't apply " ++ show' f ++
+                                " to " ++ show' e
 
 app :: (Typeable k, Typeable k') => Entity ('LAM k k') -> Entity k -> Entity k'
-app f e = fromJust $ app' f e
+app f e = fromRight $ app' f e
 
 insertSc :: Typeable k => Natural -> Sig k -> Scope -> Scope
 insertSc 0 s sc               = cons (SIG s) sc
@@ -267,3 +298,6 @@ sig (Lam _ e) = LamS s (sig e) where
     Scope sc = scope e
     s = case head sc of SIG s' -> fromJust $ cast s'
 sig (App f e) = case sig f of LamS _ t -> substS 0 e t
+
+show' :: Entity k -> String
+show' e = show e ++ " :: " ++ show (sig e)
