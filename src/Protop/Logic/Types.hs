@@ -100,7 +100,7 @@ instance Show (Sig ks k) where
     show (PrfS f g) = "(" ++ show f ++ " == " ++ show g ++ ")"
     show (LamS t)   = let sc = scope t
                           s  = headSC sc
-                      in  "((\\%" ++ show (1 + lengthSC sc) ++ " :: " ++
+                      in  "(\\(%" ++ show (lengthSC sc) ++ " :: " ++
                           show s ++ ") -> " ++ show t ++ ")"
 
 instance Show (Entity ks k) where
@@ -109,7 +109,7 @@ instance Show (Entity ks k) where
     show (Lft _ e) = show e
     show (Lam e)   = let sc = scope e
                          s  = headSC sc
-                     in  "((\\%" ++ show (1 + lengthSC sc) ++ " :: " ++
+                     in  "(\\(%" ++ show (lengthSC sc) ++ " :: " ++
                          show s ++ ") -> " ++ show e ++ ")"
     show (App f e) = "(" ++ show f ++ " " ++ show e ++ ")"
 
