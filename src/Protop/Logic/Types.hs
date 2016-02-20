@@ -202,8 +202,9 @@ lamS = LamS
 var :: Sig ks k -> Entity (k ': ks) k
 var = Var
 
-lam :: Entity (k ': ks) k' -> Entity ks ('LAM k k')
-lam = Lam
+lam :: forall k k' ks. Entity (k ': ks) k' -> Entity ks ('LAM k k')
+lam (App (Lft _ e) (Var _)) = e     -- eta reduction
+lam e                       = Lam e
 
 app' :: Entity ks ('LAM k k') -> Entity ks k -> Either String (Entity ks k')
 app' f g = let scF = scope f
@@ -217,7 +218,7 @@ app' f g = let scF = scope f
   where
 
     app'' :: Entity ks ('LAM k k') -> Entity ks k -> Entity ks k'
-    app'' (Lam e) g' = subst pE g' e
+    app'' (Lam e) g' = subst pE g' e -- beta reduction
     app'' f'      g' = App f' g'
 
 app :: Entity ks ('LAM k k') -> Entity ks k -> Entity ks k'
@@ -302,8 +303,8 @@ instance Substitutable '[] where
     subst _ e (Var _)   = e 
     subst _ _ (Lft _ f) = f
     subst _ e (Lam (f :: Entity (k ': (k' ': ks)) l))
-                        = Lam (subst (Proxy :: Proxy '[k]) e f)
-    subst p e (App f g) = App (subst p e f) (subst p e g)
+                        = lam (subst (Proxy :: Proxy '[k]) e f)
+    subst p e (App f g) = app (subst p e f) (subst p e g)
 
 instance Substitutable ls => Substitutable (l ': ls) where
 
@@ -319,8 +320,8 @@ instance Substitutable ls => Substitutable (l ': ls) where
     subst _ e (Lft s f) = let p = Proxy :: Proxy ls
                           in  Lft (substS p e s) (subst p e f)
     subst _ (e :: Entity ks k') (Lam (f :: Entity (k ': (l ': ls :++ k' ': ks)) m))
-                        = Lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
-    subst p e (App f g) = App (subst p e f) (subst p e g)
+                        = lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
+    subst p e (App f g) = app (subst p e f) (subst p e g)
 
 pE :: Proxy ('[] :: [Kind])
 pE = Proxy

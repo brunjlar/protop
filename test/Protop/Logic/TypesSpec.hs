@@ -48,7 +48,7 @@ prfSSpec = describe "prfS" $
             s  = prfS (lft sg f) g
 
         show s   `shouldBe` "(%3 == %4)"
-        scope s  `shouldBe` (Cons sg)
+        scope s  `shouldBe` Cons sg
 
 lamSSpec :: Spec
 lamSSpec = describe "lamS" $
@@ -60,12 +60,12 @@ lamSSpec = describe "lamS" $
         scope s  `shouldBe` Empty
 
 varSpec :: Spec
-varSpec = describe "var" $ do
+varSpec = describe "var" $
 
     it "should create a variable with lambda signature" $ do
         let sp = prodSig
             p  = var sp
-        (show' p) `shouldBe` "%1 :: (\\(%2 :: Ob) -> (\\(%3 :: Ob) -> Ob))"
+        show' p `shouldBe` "%1 :: (\\(%2 :: Ob) -> (\\(%3 :: Ob) -> Ob))"
 
 lamSpec :: Spec
 lamSpec = describe "lam" $ do
@@ -78,10 +78,20 @@ lamSpec = describe "lam" $ do
                                  "(\\(%2 :: Ob) -> Ob))"
         scope l'      `shouldBe` Empty
 
+    it "should perform eta reduction" $ do
+        let l  = var idSig
+            sx = objS (scope l)
+            x  = var sx
+            l' = lft sx l
+            lx = app l' x
+            m  = lam lx
+        show m `shouldBe` "%1"
+        show (sig m) `shouldBe` "(\\(%2 :: Ob) -> (%2 -> %2))"
+
 appSpec :: Spec
 appSpec = describe "app" $ do
 
-    it "should create an application using beta-reduction" $ do
+    it "should create an application using beta reduction" $ do
         let p   = var prodSig
             l   = lft prodSig xxEntity
             lp  = app l p
@@ -89,7 +99,6 @@ appSpec = describe "app" $ do
             x   = var sx
             lp' = lft sx lp 
             lpx = app lp' x
-        putStrLn $ show lpx
         show lpx       `shouldBe` "((%1 %2) %2)"
         show (sig lpx) `shouldBe` "Ob"
         scope lpx      `shouldBe` scope x
@@ -110,7 +119,7 @@ appSpec = describe "app" $ do
             x  = var sx
             sl = lft sx idSig
             l  = var sl
-            sp = lft sl $ lft sx $ prodSig
+            sp = lft sl $ lft sx prodSig
             p  = var sp
             l' = lft sp l
             x' = lft sp $ lft sl x
