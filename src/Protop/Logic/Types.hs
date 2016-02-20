@@ -8,8 +8,9 @@ module Protop.Logic.Types
     , Scope(..)
     , Sig
     , Entity
-    , scopeS
-    , scope
+    , HasScope(..)
+    , lft'
+    , lft
     ) where
 
 {-
@@ -37,7 +38,7 @@ module Protop.Logic.Types
 import Data.List       (intercalate)
 import Numeric.Natural (Natural)
 import Data.Proxy      (Proxy(..))
-import Protop.Utility  ((:++))
+import Protop.Utility  ((:++), fromRight)
 
 data Kind =
     OBJ
@@ -99,21 +100,21 @@ instance Show (Scope ks) where
 
         f :: Scope ks' -> [String]
         f Empty = []
-        f (Cons s) = show s : f (scopeS s)
+        f (Cons s) = show s : f (scope s)
 
 instance Show (Sig ks k) where
 
     show (ObjS _) = "Ob"
     show (MorS x y) = "(" ++ show x ++ " -> " ++ show y ++ ")"
     show (PrfS f g) = "(" ++ show f ++ " == " ++ show g ++ ")"
-    show (LamS t)   = let sc = scopeS t
+    show (LamS t)   = let sc = scope t
                           s  = headSC sc
                       in  "((\\%" ++ show (1 + lengthSC sc) ++ " :: " ++
                           show s ++ ") -> " ++ show t ++ ")"
 
 instance Show (Entity ks k) where
 
-    show (Var s)   = "%" ++ show (1 + lengthSC (scopeS s))
+    show (Var s)   = "%" ++ show (1 + lengthSC (scope s))
     show (Lft _ e) = show e
     show (Lam e)   = let sc = scope e
                          s  = headSC sc
@@ -121,17 +122,52 @@ instance Show (Entity ks k) where
                          show s ++ ") -> " ++ show e ++ ")"
     show (App f e) = "(" ++ show f ++ " " ++ show e ++ ")"
 
-scopeS :: Sig ks k -> Scope ks
-scopeS (ObjS sc)  = sc
-scopeS (MorS x _) = scope  x
-scopeS (PrfS f _) = scope  f
-scopeS (LamS s)   = tailSC $ scopeS s
+class HasScope (a :: [Kind] -> Kind -> *) where
 
-scope :: Entity ks k -> Scope ks
-scope (Var s)   = Cons s
-scope (Lft s _) = Cons s
-scope (Lam e)   = tailSC $ scope e
-scope (App f _) = scope f
+    scope :: a ks k -> Scope ks
+
+instance HasScope Sig where
+
+    scope (ObjS sc)  = sc
+    scope (MorS x _) = scope  x
+    scope (PrfS f _) = scope  f
+    scope (LamS s)   = tailSC $ scope s
+
+instance HasScope Entity where
+
+    scope (Var s)   = Cons s
+    scope (Lft s _) = Cons s
+    scope (Lam e)   = tailSC $ scope e
+    scope (App f _) = scope f
+
+class Liftable (a :: [Kind] -> Kind -> *) where
+
+    lft_ :: Sig ks k -> a ks k' -> a (k ': ks) k'
+
+lft' :: ( Show (a ks k')
+        , HasScope a
+        , Liftable a
+        ) => Sig ks k -> a ks k' -> Either String (a (k ': ks) k')
+lft' s x = let ss = scope s
+               sx = scope x
+           in if ss == sx
+                then Right $ lft_ s x
+                else Left  $ "can't lift " ++ show x ++ " (" ++ show sx ++
+                             ") to " ++ show s ++ " (" ++ show ss ++ ")"
+
+lft :: ( Show (a ks k')
+       , HasScope a
+       , Liftable a
+       ) => Sig ks k -> a ks k' -> a (k ': ks) k'
+lft s x = fromRight $ lft' s x
+
+instance Liftable Sig where
+
+    lft_ = insertS pE
+
+instance Liftable Entity where
+
+    lft_ = insert pE
 
 --sig :: Entity ks k -> Sig ks k
 --sig (Var s)   = insertS 0 s s
@@ -142,14 +178,14 @@ scope (App f _) = scope f
 --sig (App f e) = case sig f of LamS _ t -> substS 0 e t
 
 tailSC :: Scope (k ': ks) -> Scope ks
-tailSC (Cons s) = scopeS s
+tailSC (Cons s) = scope s
 
 headSC :: Scope (k ': ks) -> Sig ks k
 headSC (Cons s) = s
 
 lengthSC :: Scope ks -> Natural
 lengthSC Empty    = 0
-lengthSC (Cons s) = 1 + lengthSC (scopeS s)
+lengthSC (Cons s) = 1 + lengthSC (scope s)
 
 class Insertable (ls :: [Kind]) where
 
@@ -200,32 +236,7 @@ instance Insertable ls => Insertable (l ': ls) where
 pE :: Proxy ('[] :: [Kind])
 pE = Proxy
 
---insert :: (Typeable k, Typeable k') => Natural -> Sig k -> Entity k' -> Entity k'
---insert 0 s e         = Lft s e
---insert n s (Var t)   = Var   (insertS (n - 1) s t)
---insert n s (Lft t e) = Lft t (insert  (n - 1) s e)
---insert n s (Lam p e) = Lam p (insert  (n + 1) s e)
---insert n s (App f e) = App (insert n s f) (insert n s e)
-
 {-
-
-instance Show (Sig k) where
-
-    show (ObjS _)   = "Ob"
-    show (MorS x y) = "(" ++ show x ++ " -> " ++ show y ++ ")"
-    show (PrfS f g) = "(" ++ show f ++ " == " ++ show g ++ ")"
-    show (LamS s t) = let Scope sc = scopeS s
-                      in  "(\\(%" ++ show (1 + length sc) ++ " :: "
-                          ++ show s ++ ") -> " ++ show t ++ ")"
-
-instance Show (Entity k) where
-
-    show (Var s)   = let Scope sc = scopeS s in "%" ++ show (1 + length sc)
-    show (Lft _ e) = show e
-    show (Lam _ e) = let Scope sc = scope e
-                     in  "(\\(%" ++ show (length sc) ++ " :: "
-                         ++ show (head sc) ++ ") -> " ++ show e ++ ")"
-    show (App f e) = "(" ++ show f ++ " " ++ show e ++ ")"
 
 objS :: Scope -> Sig 'OBJ
 objS = ObjS
@@ -255,7 +266,7 @@ lamS' :: forall k k'.
          , Typeable k'
          ) => Proxy k -> Sig k' -> Either String (Sig ('LAM k k'))
 lamS' _ t =
-    case scopeS t of
+    case scope t of
         Scope []      ->
             Left "can't make lambda signature in empty scope"
         Scope (s : _) ->
@@ -275,10 +286,10 @@ var = Var
 
 lft' :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Either String (Entity k')
 lft' s e
-    | scopeS s == scope e = Right $ Lft s e
+    | scope s == scope e = Right $ Lft s e
     | otherwise           = Left $ "can't lift " ++ show' e ++ " (scope " ++
                                    show (scope e) ++ ") by signature " ++
-                                   show s ++ " (scope " ++ show (scopeS s) ++ ")"
+                                   show s ++ " (scope " ++ show (scope s) ++ ")"
 
 lft :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Entity k'
 lft s e = fromRight $ lft' s e
@@ -340,9 +351,9 @@ subst n e (App f g) = App (subst n e f) (subst n e g)
 
 lftS' :: Typeable k => Sig k -> Sig k' -> Either String (Sig k')
 lftS' s t
-    | scopeS s == scopeS t = Right $ insertS 0 s t
-    | otherwise            = Left  $ "can't add " ++ show s ++ " (scope " ++ show (scopeS s) ++
-                                     ") to " ++ show t ++ " (scope " ++ show (scopeS t) ++ ")"
+    | scope s == scope t = Right $ insertS 0 s t
+    | otherwise            = Left  $ "can't add " ++ show s ++ " (scope " ++ show (scope s) ++
+                                     ") to " ++ show t ++ " (scope " ++ show (scope t) ++ ")"
 
 lftS :: Typeable k => Sig k -> Sig k' -> Sig k'
 lftS s t = fromRight $ lftS' s t
