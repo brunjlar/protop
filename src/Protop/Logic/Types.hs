@@ -144,6 +144,14 @@ class Liftable (a :: [Kind] -> Kind -> *) where
 
     lft_ :: Sig ks k -> a ks k' -> a (k ': ks) k'
 
+instance Liftable Sig where
+
+    lft_ = insertS pE
+
+instance Liftable Entity where
+
+    lft_ = insert pE
+
 lft' :: ( Show (a ks k')
         , HasScope a
         , Liftable a
@@ -160,14 +168,6 @@ lft :: ( Show (a ks k')
        , Liftable a
        ) => Sig ks k -> a ks k' -> a (k ': ks) k'
 lft s x = fromRight $ lft' s x
-
-instance Liftable Sig where
-
-    lft_ = insertS pE
-
-instance Liftable Entity where
-
-    lft_ = insert pE
 
 --sig :: Entity ks k -> Sig ks k
 --sig (Var s)   = insertS 0 s s
@@ -190,10 +190,10 @@ lengthSC (Cons s) = 1 + lengthSC (scope s)
 class Insertable (ls :: [Kind]) where
 
     insertSC :: Proxy ls ->
-                Sig ks k -> Scope  (ls :++ ks) -> Scope  (ls :++ (k ': ks))
+                Sig ks k -> Scope  (ls :++ ks)   -> Scope  (ls :++ (k ': ks))
 
     insertS  :: Proxy ls ->
-                Sig ks k -> Sig (ls :++ ks) l -> Sig (ls :++ (k ': ks)) l
+                Sig ks k -> Sig    (ls :++ ks) l -> Sig    (ls :++ (k ': ks)) l
 
     insert   :: Proxy ls ->
                 Sig ks k -> Entity (ls :++ ks) l -> Entity (ls :++ (k ': ks)) l
@@ -232,6 +232,49 @@ instance Insertable ls => Insertable (l ': ls) where
                          = Lam (insert (Proxy :: Proxy (m ': l ': ls)) s e)
     insert p s (App f e) = App (insert p s f) (insert p s e)
 
+class Substitutable (ls :: [Kind]) where
+
+    substSC :: Proxy ls ->
+               Entity ks k -> Scope  (ls :++ (k ': ks))    -> Scope  (ls :++ ks)
+
+    substS  :: Proxy ls ->
+               Entity ks k -> Sig    (ls :++ (k ': ks)) l' -> Sig    (ls :++ ks) l'
+
+    subst   :: Proxy ls ->
+               Entity ks k -> Entity (ls :++ (k ': ks)) l' -> Entity (ls :++ ks) l'
+
+instance Substitutable '[] where
+
+    substSC _ _ sc = tailSC sc
+
+    substS p e (ObjS sc)  = ObjS (substSC p e sc) 
+    substS p e (MorS x y) = MorS (subst p e x) (subst p e y)
+    substS p e (PrfS f g) = PrfS (subst p e f) (subst p e g)
+    substS _ e (LamS (t :: Sig (k ': (k' ': ks)) l))
+                          = LamS (substS (Proxy :: Proxy '[k]) e t)
+
+    subst _ e (Var _)   = e 
+    subst _ _ (Lft _ f) = f
+    subst _ e (Lam (f :: Entity (k ': (k' ': ks)) l))
+                        = Lam (subst (Proxy :: Proxy '[k]) e f)
+    subst p e (App f g) = App (subst p e f) (subst p e g)
+
+instance Substitutable ls => Substitutable (l ': ls) where
+
+    substSC _ e sc = Cons $ substS (Proxy :: Proxy ls) e $ headSC sc
+
+    substS p e (ObjS sc)  = ObjS (substSC p e sc)
+    substS p e (MorS x y) = MorS (subst p e x) (subst p e y)
+    substS p e (PrfS f g) = PrfS (subst p e f) (subst p e g)
+    substS _ (e :: Entity ks k') (LamS (t :: Sig (k ': ((l ': ls) :++ (k' ': ks))) m))
+                          = LamS $ substS (Proxy :: Proxy (k ': (l ': ls))) e t
+
+    subst _ e (Var s)   = Var $ substS (Proxy :: Proxy ls) e s
+    subst _ e (Lft s f) = let p = Proxy :: Proxy ls
+                          in  Lft (substS p e s) (subst p e f)
+    subst _ (e :: Entity ks k') (Lam (f :: Entity (k ': ((l ': ls) :++ (k' ': ks))) m))
+                        = Lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
+    subst p e (App f g) = App (subst p e f) (subst p e g)
 
 pE :: Proxy ('[] :: [Kind])
 pE = Proxy
@@ -291,9 +334,6 @@ lft' s e
                                    show (scope e) ++ ") by signature " ++
                                    show s ++ " (scope " ++ show (scope s) ++ ")"
 
-lft :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Entity k'
-lft s e = fromRight $ lft' s e
-
 lam' :: ( Typeable k
         , Typeable k'
         ) => Proxy k -> Entity k' -> Either String (Entity ('LAM k k'))
@@ -328,25 +368,6 @@ app' f e
 
 app :: (Typeable k, Typeable k') => Entity ('LAM k k') -> Entity k -> Entity k'
 app f e = fromRight $ app' f e
-
-substSC :: Typeable k => Natural -> Entity k -> Scope -> Scope
-substSC 0 e (Scope (_     : sc)) = Scope sc
-substSC n e (Scope (SIG s : sc)) = cons $ SIG $ substS (n - 1) e s
-substSC _ e (Scope [])           = error "can't substitute in empty scope"
-
-substS :: Typeable k => Natural -> Entity k -> Sig k' -> Sig k'
-substS n e (ObjS sc)  = ObjS (substSC n e sc) 
-substS n e (MorS x y) = MorS (subst   n e x) (subst  n       e y)
-substS n e (PrfS f g) = PrfS (subst   n e f) (subst  n       e g)
-substS n e (LamS s t) = LamS (substS  n e s) (substS (n + 1) e t)
-
-subst :: Typeable k => Natural -> Entity k -> Entity k' -> Entity k'
-subst 0 e (Var _)   = fromJust $ cast e
-subst n e (Var s)   = Var (substS (n - 1) e s)
-subst 0 _ (Lft _ f) = f
-subst n e (Lft s f) = Lft s (subst (n - 1) e f)
-subst n e (Lam p f) = Lam p (subst (n + 1) e f)
-subst n e (App f g) = App (subst n e f) (subst n e g)
 
 
 lftS' :: Typeable k => Sig k -> Sig k' -> Either String (Sig k')
