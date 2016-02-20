@@ -81,7 +81,7 @@ lamSpec = describe "lam" $ do
 appSpec :: Spec
 appSpec = describe "app" $ do
 
-    it "should create an application resulting in an object" $ do
+    it "should create an application using beta-reduction" $ do
         let p   = var prodSig
             l   = lft prodSig xxEntity
             lp  = app l p
@@ -90,8 +90,7 @@ appSpec = describe "app" $ do
             lp' = lft sx lp 
             lpx = app lp' x
         putStrLn $ show lpx
-        show lpx       `shouldBe` "(((\\(%3 :: (\\(%3 :: Ob) -> (\\(%4 :: Ob) -> Ob)))" ++
-                                  " -> (\\(%4 :: Ob) -> ((%3 %4) %4))) %1) %2)"
+        show lpx       `shouldBe` "((%1 %2) %2)"
         show (sig lpx) `shouldBe` "Ob"
         scope lpx      `shouldBe` scope x
 
@@ -126,7 +125,7 @@ appSpec = describe "app" $ do
         let p  = var prodSig
             q  = lft prodSig xxEntity
             l  = q `app` p
-        show l `shouldBe` ""
+        show l `shouldBe` "(\\(%2 :: Ob) -> ((%1 %2) %2))"
 
 prodSig :: Sig '[] ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
 prodSig = let sx = objS Empty

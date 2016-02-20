@@ -209,10 +209,16 @@ app' :: Entity ks ('LAM k k') -> Entity ks k -> Either String (Entity ks k')
 app' f g = let scF = scope f
                scG = scope g
            in if scF == scG
-                then Right $ App f g
+                then Right $ app'' f g
                 else Left  $ "can't apply " ++
                              show f ++ " (" ++ show scF ++ ") to " ++
                              show g ++ " (" ++ show scG ++ ")"
+
+  where
+
+    app'' :: Entity ks ('LAM k k') -> Entity ks k -> Entity ks k'
+    app'' (Lam e) g' = subst pE g' e
+    app'' f'      g' = App f' g'
 
 app :: Entity ks ('LAM k k') -> Entity ks k -> Entity ks k'
 app f g = fromRight $ app' f g
