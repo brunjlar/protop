@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Protop.Logic.Types
     ( Kind(..)
@@ -11,29 +12,19 @@ module Protop.Logic.Types
     , HasScope(..)
     , lft'
     , lft
-    ) where
-
-{-
+    , sig
     , objS
     , morS'
     , morS
     , prfS'
     , prfS
-    , lamS'
     , lamS
     , var
-    , lft
-    , lft'
-    , lftS'
-    , lftS
-    , lam'
     , lam
     , app'
     , app
-    , sig
     , show'
     ) where
--}
 
 import Data.List       (intercalate)
 import Numeric.Natural (Natural)
@@ -80,10 +71,10 @@ instance Eq (Scope ks) where
 
 instance Eq (Sig ks k) where
 
-    ObjS s   == ObjS s'    = s == s'
-    MorS x y == MorS x' y' = x == x' && y == y'
-    PrfS f g == PrfS f' g' = f == f' && g == g'
-    LamS s   == LamS s'    = s == s'
+    ObjS sc  == ObjS sc'   = sc == sc'
+    MorS x y == MorS x' y' = x  == x' && y == y'
+    PrfS f g == PrfS f' g' = f  == f' && g == g'
+    LamS s   == LamS s'    = s  == s'
     _        == _          = False
 
 instance Eq (Entity ks k) where
@@ -169,13 +160,62 @@ lft :: ( Show (a ks k')
        ) => Sig ks k -> a ks k' -> a (k ': ks) k'
 lft s x = fromRight $ lft' s x
 
---sig :: Entity ks k -> Sig ks k
---sig (Var s)   = insertS 0 s s
---sig (Lft s e) = insertS 0 s $ sig e
---sig (Lam _ e) = LamS s (sig e) where
---    Scope sc = scope e
---    s = case head sc of SIG s' -> fromJust $ cast s'
---sig (App f e) = case sig f of LamS _ t -> substS 0 e t
+sig :: Entity ks k -> Sig ks k
+sig (Var s)   = lft s s
+sig (Lft s e) = lft s $ sig e
+sig (Lam s)   = LamS (sig s)
+sig (App f e) = case sig f of LamS s -> substS pE e s 
+
+show' :: Entity ks k -> String
+show' e = show e ++ " :: " ++ show (sig e)
+
+objS :: Scope ks -> Sig ks 'OBJ
+objS = ObjS
+
+morS' :: Entity ks 'OBJ -> Entity ks 'OBJ -> Either String (Sig ks 'MOR)
+morS' x y = let scX = scope x
+                scY = scope y
+            in  if scX == scY
+                    then Right $ MorS x y
+                    else Left  $ "can't make morphism signature from objects " ++
+                                 show x ++ " (" ++ show scX ++ ") and " ++
+                                 show y ++ " (" ++ show scY ++ ")"
+
+morS :: Entity ks 'OBJ -> Entity ks 'OBJ -> Sig ks 'MOR
+morS x y = fromRight $ morS' x y
+
+prfS' :: Entity ks 'MOR -> Entity ks 'MOR -> Either String (Sig ks 'PRF)
+prfS' f g = let scF = scope f
+                scG = scope g
+            in if scF == scG && sig f == sig g
+                then Right $ PrfS f g
+                else Left  $ "can't make proof signature from morphisms " ++
+                             show f ++ " (" ++ show scF ++ ") and " ++
+                             show g ++ " (" ++ show scG ++ ")"
+
+prfS :: Entity ks 'MOR -> Entity ks 'MOR -> Sig ks 'PRF
+prfS f g = fromRight $ prfS' f g
+
+lamS :: Sig (k ': ks) k' -> Sig ks ('LAM k k')
+lamS = LamS
+
+var :: Sig ks k -> Entity (k ': ks) k
+var = Var
+
+lam :: Entity (k ': ks) k' -> Entity ks ('LAM k k')
+lam = Lam
+
+app' :: Entity ks ('LAM k k') -> Entity ks k -> Either String (Entity ks k')
+app' f g = let scF = scope f
+               scG = scope g
+           in if scF == scG
+                then Right $ App f g
+                else Left  $ "can't apply " ++
+                             show f ++ " (" ++ show scF ++ ") to " ++
+                             show g ++ " (" ++ show scG ++ ")"
+
+app :: Entity ks ('LAM k k') -> Entity ks k -> Entity ks k'
+app f g = fromRight $ app' f g
 
 tailSC :: Scope (k ': ks) -> Scope ks
 tailSC (Cons s) = scope s
@@ -190,13 +230,13 @@ lengthSC (Cons s) = 1 + lengthSC (scope s)
 class Insertable (ls :: [Kind]) where
 
     insertSC :: Proxy ls ->
-                Sig ks k -> Scope  (ls :++ ks)   -> Scope  (ls :++ (k ': ks))
+                Sig ks k -> Scope  (ls :++ ks)   -> Scope  (ls :++ k ': ks)
 
     insertS  :: Proxy ls ->
-                Sig ks k -> Sig    (ls :++ ks) l -> Sig    (ls :++ (k ': ks)) l
+                Sig ks k -> Sig    (ls :++ ks) l -> Sig    (ls :++ k ': ks) l
 
     insert   :: Proxy ls ->
-                Sig ks k -> Entity (ls :++ ks) l -> Entity (ls :++ (k ': ks)) l
+                Sig ks k -> Entity (ls :++ ks) l -> Entity (ls :++ k ': ks) l
 
 instance Insertable '[] where
 
@@ -222,30 +262,30 @@ instance Insertable ls => Insertable (l ': ls) where
     insertS p s (ObjS sc)  = ObjS (insertSC p s sc)
     insertS p s (MorS x y) = MorS (insert p s x) (insert p s y)
     insertS p s (PrfS f g) = PrfS (insert p s f) (insert p s g)
-    insertS _ (s :: Sig ks k) (LamS (t :: Sig (m ': ((l ': ls) :++ ks)) m'))
+    insertS _ (s :: Sig ks k) (LamS (t :: Sig (m ': l ': ls :++ ks) m'))
                            = LamS (insertS (Proxy :: Proxy (m ': l ': ls)) s t)
 
     insert _ s (Var t)   = Var (insertS (Proxy :: Proxy ls) s t) 
     insert _ s (Lft t e) = let p = Proxy :: Proxy ls
                            in  Lft (insertS p s t) (insert p s e)
-    insert _ (s :: Sig ks k) (Lam (e :: Entity (m ': ((l ': ls) :++ ks)) m'))
+    insert _ (s :: Sig ks k) (Lam (e :: Entity (m ': l ': ls :++ ks) m'))
                          = Lam (insert (Proxy :: Proxy (m ': l ': ls)) s e)
     insert p s (App f e) = App (insert p s f) (insert p s e)
 
 class Substitutable (ls :: [Kind]) where
 
     substSC :: Proxy ls ->
-               Entity ks k -> Scope  (ls :++ (k ': ks))    -> Scope  (ls :++ ks)
+               Entity ks k -> Scope  (ls :++ k ': ks)    -> Scope  (ls :++ ks)
 
     substS  :: Proxy ls ->
-               Entity ks k -> Sig    (ls :++ (k ': ks)) l' -> Sig    (ls :++ ks) l'
+               Entity ks k -> Sig    (ls :++ k ': ks) l' -> Sig    (ls :++ ks) l'
 
     subst   :: Proxy ls ->
-               Entity ks k -> Entity (ls :++ (k ': ks)) l' -> Entity (ls :++ ks) l'
+               Entity ks k -> Entity (ls :++ k ': ks) l' -> Entity (ls :++ ks) l'
 
 instance Substitutable '[] where
 
-    substSC _ _ sc = tailSC sc
+    substSC _ _ = tailSC
 
     substS p e (ObjS sc)  = ObjS (substSC p e sc) 
     substS p e (MorS x y) = MorS (subst p e x) (subst p e y)
@@ -266,119 +306,15 @@ instance Substitutable ls => Substitutable (l ': ls) where
     substS p e (ObjS sc)  = ObjS (substSC p e sc)
     substS p e (MorS x y) = MorS (subst p e x) (subst p e y)
     substS p e (PrfS f g) = PrfS (subst p e f) (subst p e g)
-    substS _ (e :: Entity ks k') (LamS (t :: Sig (k ': ((l ': ls) :++ (k' ': ks))) m))
-                          = LamS $ substS (Proxy :: Proxy (k ': (l ': ls))) e t
+    substS _ (e :: Entity ks k') (LamS (t :: Sig (k ': l ': ls :++ k' ': ks) m))
+                          = LamS $ substS (Proxy :: Proxy (k ': l ': ls)) e t
 
     subst _ e (Var s)   = Var $ substS (Proxy :: Proxy ls) e s
     subst _ e (Lft s f) = let p = Proxy :: Proxy ls
                           in  Lft (substS p e s) (subst p e f)
-    subst _ (e :: Entity ks k') (Lam (f :: Entity (k ': ((l ': ls) :++ (k' ': ks))) m))
+    subst _ (e :: Entity ks k') (Lam (f :: Entity (k ': (l ': ls :++ k' ': ks)) m))
                         = Lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
     subst p e (App f g) = App (subst p e f) (subst p e g)
 
 pE :: Proxy ('[] :: [Kind])
 pE = Proxy
-
-{-
-
-objS :: Scope -> Sig 'OBJ
-objS = ObjS
-
-morS' :: Entity 'OBJ -> Entity 'OBJ -> Either String (Sig 'MOR)
-morS' x y
-    | scope x == scope y = Right $ MorS x y
-    | otherwise          = Left $ "can't make morphism signature from " ++
-                                  show x ++ " (scope " ++ show (scope x) ++
-                                  ") and " ++
-                                  show y ++ " (scope " ++ show (scope y) ++ ")"
-
-morS :: Entity 'OBJ -> Entity 'OBJ -> Sig 'MOR
-morS x y = fromRight $ morS' x y
-
-prfS' :: Entity 'MOR -> Entity 'MOR -> Either String (Sig 'PRF)
-prfS' f g
-    | sig f == sig g = Right $ PrfS f g
-    | otherwise      = Left $ "can't make proof signature from " ++
-                              show' f ++ " and " ++ show' g
-
-prfS :: Entity 'MOR -> Entity 'MOR -> Sig 'PRF
-prfS f g = fromRight $ prfS' f g
-
-lamS' :: forall k k'.
-         ( Typeable k
-         , Typeable k'
-         ) => Proxy k -> Sig k' -> Either String (Sig ('LAM k k'))
-lamS' _ t =
-    case scope t of
-        Scope []      ->
-            Left "can't make lambda signature in empty scope"
-        Scope (s : _) ->
-            case s of
-                SIG s' ->
-                    case cast s' of
-                        Just s'' ->Right $ LamS s'' t
-                        Nothing  ->
-                            Left $ show t ++ " doesn't have argument kind "
-                                          ++ show (typeRep (Proxy :: Proxy k)) 
-
-lamS :: (Typeable k, Typeable k') => Proxy k -> Sig k' -> Sig ('LAM k k')
-lamS p t = fromRight $ lamS' p t
-
-var :: Typeable k => Sig k -> Entity k
-var = Var
-
-lft' :: (Typeable k, Typeable k') => Sig k -> Entity k' -> Either String (Entity k')
-lft' s e
-    | scope s == scope e = Right $ Lft s e
-    | otherwise           = Left $ "can't lift " ++ show' e ++ " (scope " ++
-                                   show (scope e) ++ ") by signature " ++
-                                   show s ++ " (scope " ++ show (scope s) ++ ")"
-
-lam' :: ( Typeable k
-        , Typeable k'
-        ) => Proxy k -> Entity k' -> Either String (Entity ('LAM k k'))
-lam' p e =
-    case scope e of
-        Scope []                     ->
-            Left $ "can't make lambda from " ++ show' e ++ " (empty scope)"
-        Scope (s : _)
-            | typeRep p == kindRep s ->
-                Right $ Lam p e
-            | otherwise              ->
-                Left $ "can't make lambda with argument kind " ++
-                       show (typeRep p) ++ " from " ++ show' e
-
-lam :: (Typeable k, Typeable k') => Proxy k -> Entity k' -> Entity ('LAM k k')
-lam p e = fromRight $ lam' p e
-
-app' :: ( Typeable k
-        , Typeable k' 
-        ) => Entity ('LAM k k') -> Entity k -> Either String (Entity k')
-app' f e
-    | scope f /= scope e =
-        Left $ "can't apply " ++ show' f ++ " (scope " ++ show (scope f) ++
-               ") to " ++ show' e ++ " (scope " ++ show (scope e)
-    | otherwise          =
-        case sig f of
-            LamS s _ ->
-                if sig e == s
-                    then Right $ App f e
-                    else Left $ "can't apply " ++ show' f ++
-                                " to " ++ show' e
-
-app :: (Typeable k, Typeable k') => Entity ('LAM k k') -> Entity k -> Entity k'
-app f e = fromRight $ app' f e
-
-
-lftS' :: Typeable k => Sig k -> Sig k' -> Either String (Sig k')
-lftS' s t
-    | scope s == scope t = Right $ insertS 0 s t
-    | otherwise            = Left  $ "can't add " ++ show s ++ " (scope " ++ show (scope s) ++
-                                     ") to " ++ show t ++ " (scope " ++ show (scope t) ++ ")"
-
-lftS :: Typeable k => Sig k -> Sig k' -> Sig k'
-lftS s t = fromRight $ lftS' s t
-
-show' :: Entity k -> String
-show' e = show e ++ " :: " ++ show (sig e)
--}

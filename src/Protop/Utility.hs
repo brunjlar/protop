@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DataKinds #-}
 
 module Protop.Utility
     ( Typeable
@@ -41,7 +42,8 @@ fromRight :: Either String a -> a
 fromRight (Right x) = x
 fromRight (Left e)  = error e
 
+infixr 5 :++
 type family (:++) (xs :: [k]) (ys :: [k]) :: [k] where
 
     '[]       :++ ys = ys
-    (x ': xs) :++ ys = x ': (xs :++ ys)
+    (x ': xs) :++ ys = x ': xs :++ ys
