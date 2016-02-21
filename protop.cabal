@@ -34,6 +34,7 @@ library
                      , Protop.Core.Transitivities
                      , Protop.Logic
                      , Protop.Logic.Model
+                     , Protop.Logic.Simple
                      , Protop.Logic.Types
                      , Protop.Utility
   ghc-options:         -Wall
