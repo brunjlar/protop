@@ -22,6 +22,8 @@ module Protop.Logic.Simple
     , varE
     , lamE
     , appE
+    , scopeSIG
+    , scopeE
     ) where
 
 import Data.Typeable      (Typeable, eqT, (:~:)(..))
@@ -179,3 +181,8 @@ lamE (ENTITY e) = lam_ e
 appE :: ENTITY -> ENTITY -> ENTITY
 appE (ENTITY e) = app_ e
 
+scopeSIG :: SIG -> SCOPE
+scopeSIG (SIG s) = SCOPE $ scope s
+
+scopeE :: ENTITY -> SCOPE
+scopeE (ENTITY e) = SCOPE $ scope e

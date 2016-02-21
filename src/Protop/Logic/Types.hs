@@ -7,6 +7,8 @@
 module Protop.Logic.Types
     ( Kind(..)
     , Scope(..)
+    , headSC
+    , tailSC
     , Sig
     , Entity
     , HasScope(..)

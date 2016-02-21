@@ -33,14 +33,15 @@ library
                      , Protop.Core.Terminal
                      , Protop.Core.Transitivities
                      , Protop.Logic
+                     , Protop.Logic.Builder
                      , Protop.Logic.Model
                      , Protop.Logic.Simple
                      , Protop.Logic.Types
                      , Protop.Utility
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
-                     , ghc-typelits-natnormalise
                      , hspec
+                     , mtl
   default-language:    Haskell2010
 
 test-suite protop-test
@@ -52,6 +53,7 @@ test-suite protop-test
                      , protop
   other-modules:       Protop.Core.NaturalSpec
                      , Protop.Core.OmegaSpec
+                     , Protop.Logic.BuilderSpec
                      , Protop.Logic.TypesSpec
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
