@@ -3,12 +3,14 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Protop.Logic.Types
     ( Kind(..)
     , Scope(..)
     , headSC
     , tailSC
+    , lengthSC
     , Sig
     , Entity
     , HasScope(..)
@@ -26,11 +28,15 @@ module Protop.Logic.Types
     , app'
     , app
     , show'
+    , ScopeM(..)
+    , Model
+    , compile
     ) where
 
 import Data.List       (intercalate)
 import Numeric.Natural (Natural)
 import Data.Proxy      (Proxy(..))
+import Protop.Core     (Object, MORPHISM, PROOF)
 import Protop.Utility  ((:++), fromRight)
 
 data Kind =
@@ -235,6 +241,25 @@ headSC (Cons s) = s
 lengthSC :: Scope ks -> Natural
 lengthSC Empty    = 0
 lengthSC (Cons s) = 1 + lengthSC (scope s)
+
+type family Model (a :: Kind) where
+    Model 'OBJ        = Object
+    Model 'MOR        = MORPHISM
+    Model 'PRF        = PROOF
+    Model ('LAM k k') = Model k -> Model k'
+
+data ScopeM (ks :: [Kind]) :: * where
+
+    EmptyM :: ScopeM '[]
+
+    ConsM :: Model k -> ScopeM ks -> ScopeM (k ': ks)
+
+compile :: Entity ks k -> ScopeM ks -> Model k
+compile (Var _)   (ConsM e _)  = e
+compile (Lft _ e) (ConsM _ sc) = compile e sc
+compile (App f g) sc           = compile f sc (compile g sc)
+compile (Lam e)   sc           = \e' -> compile e (ConsM e' sc)
+compile _         _            = error "impossible branch"
 
 class Insertable (ls :: [Kind]) where
 

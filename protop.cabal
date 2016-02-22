@@ -34,7 +34,6 @@ library
                      , Protop.Core.Transitivities
                      , Protop.Logic
                      , Protop.Logic.Builder
-                     , Protop.Logic.Model
                      , Protop.Logic.Simple
                      , Protop.Logic.Types
                      , Protop.Utility

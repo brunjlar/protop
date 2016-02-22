@@ -1,3 +1,5 @@
 :set -itest
 :set -XTypeOperators
 :set -XDataKinds
+:set -XTypeFamilies
+:set -XFlexibleContexts

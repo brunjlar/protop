@@ -2,6 +2,7 @@
 
 module Protop.Logic.TypesSpec (spec) where
 
+import Protop.Core
 import Protop.Logic
 import Test.Hspec
 
@@ -14,6 +15,7 @@ spec = do
     varSpec
     lamSpec
     appSpec
+    compileSpec
 
 objSSpec :: Spec
 objSSpec = describe "objS" $
@@ -136,6 +138,25 @@ appSpec = describe "app" $ do
             l  = q `app` p
         show l `shouldBe` "(\\(%2 :: Ob) -> ((%1 %2) %2))"
 
+compileSpec :: Spec
+compileSpec = describe "compile" $ do
+
+    it "should compile a simple object" $ do
+        let sn = objS Empty
+            n  = var sn
+            sc = ConsM (Object N) EmptyM
+            c  = compile n sc
+        c `shouldBe` Object N
+
+    it "should compile a lambda" $ do
+        let p  = var prodSig
+            sx = objS (scope p)
+            x  = var sx
+            p' = lft sx p
+            e  = lam $ (p' `app` x) `app` x
+            c  = compile e $ ConsM prodObject EmptyM
+        c (Object N) `shouldBe` (Object $ N :* N)
+        
 prodSig :: Sig '[] ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
 prodSig = let sx = objS Empty
               x  = var sx
@@ -164,3 +185,6 @@ idSig = let sx = objS Empty
             x  = var sx
             ms = morS x x
         in  lamS ms
+
+prodObject :: Object -> Object -> Object
+prodObject (Object x) (Object y) = Object (x :* y)
