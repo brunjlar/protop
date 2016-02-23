@@ -121,18 +121,22 @@ instance Show (Entity ks k) where
                          show s ++ ") -> " ++ show e ++ ")"
     show (App f e) = "(" ++ show f ++ " " ++ show e ++ ")"
 
-class HasScope (a :: Kind -> [Kind] -> *) where
+class HasScope (a :: [Kind] -> *) where
 
-    scope :: a k ks -> Scope ks
+    scope :: a ks -> Scope ks
 
-instance HasScope Sig where
+instance HasScope Scope where
+
+    scope = id
+
+instance HasScope (Sig k) where
 
     scope (ObjS sc)  = sc
     scope (MorS x _) = scope  x
     scope (PrfS f _) = scope  f
     scope (LamS s)   = tailSC $ scope s
 
-instance HasScope Entity where
+instance HasScope (Entity k) where
 
     scope (Var s)   = Cons s
     scope (Lft s _) = Cons s
@@ -152,7 +156,7 @@ instance Liftable Entity where
     lft_ = insert pE
 
 lft' :: ( Show (a k' ks)
-        , HasScope a
+        , HasScope (a k')
         , Liftable a
         ) => Sig k ks -> a k' ks -> Either String (a k' (k ': ks))
 lft' s x = let ss = scope s
@@ -163,7 +167,7 @@ lft' s x = let ss = scope s
                              ") to " ++ show s ++ " (" ++ show ss ++ ")"
 
 lft :: ( Show (a k' ks)
-       , HasScope a
+       , HasScope (a k')
        , Liftable a
        ) => Sig k ks -> a k' ks -> a k' (k ': ks)
 lft s x = fromRight $ lft' s x
