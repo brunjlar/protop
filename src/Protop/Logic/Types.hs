@@ -31,6 +31,7 @@ module Protop.Logic.Types
     , ScopeM(..)
     , Model
     , compile
+    , SCLiftable(..)
     ) where
 
 import Data.List       (intercalate)
@@ -353,6 +354,29 @@ instance Substitutable ls => Substitutable (l ': ls) where
     subst _ (e :: Entity k' ks) (Lam (f :: Entity m (k ': (l ': ls :++ k' ': ks))))
                         = lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
     subst p e (App f g) = app (subst p e f) (subst p e g)
+
+class SCLiftable (a :: [Kind] -> *) where
+
+    scLft :: Scope ks -> a ls -> a (ls :++ ks)
+
+instance SCLiftable Scope where
+
+    scLft sc Empty    = sc
+    scLft sc (Cons s) = Cons (scLft sc s)
+
+instance SCLiftable (Sig k) where
+
+    scLft sc (ObjS sc') = objS $ scLft sc sc'
+    scLft sc (MorS x y) = morS (scLft sc x) (scLft sc y)
+    scLft sc (PrfS f g) = prfS (scLft sc f) (scLft sc g)
+    scLft sc (LamS s)   = lamS (scLft sc s)
+
+instance SCLiftable (Entity k) where
+
+    scLft sc (Var s)   = var (scLft sc s)
+    scLft sc (Lft s e) = lft (scLft sc s) (scLft sc e)
+    scLft sc (Lam e)   = lam (scLft sc e)
+    scLft sc (App f g) = app (scLft sc f) (scLft sc g)
 
 pE :: Proxy ('[] :: [Kind])
 pE = Proxy
