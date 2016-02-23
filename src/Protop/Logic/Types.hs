@@ -49,27 +49,27 @@ data Scope :: [Kind] -> * where
 
     Empty :: Scope '[]
 
-    Cons :: Sig ks k -> Scope (k ': ks)
+    Cons :: Sig k ks -> Scope (k ': ks)
 
-data Sig :: [Kind] -> Kind -> * where
+data Sig :: Kind -> [Kind] -> * where
 
-    ObjS :: Scope ks -> Sig ks 'OBJ 
+    ObjS :: Scope ks -> Sig 'OBJ ks
 
-    MorS :: Entity ks 'OBJ -> Entity ks 'OBJ -> Sig ks 'MOR
+    MorS :: Entity 'OBJ ks -> Entity 'OBJ ks -> Sig 'MOR ks 
 
-    PrfS :: Entity ks 'MOR -> Entity ks 'MOR -> Sig ks 'PRF
+    PrfS :: Entity 'MOR ks -> Entity 'MOR ks -> Sig 'PRF ks 
 
-    LamS :: Sig (k ': ks) k' -> Sig ks ('LAM k k')
+    LamS :: Sig k' (k ': ks) -> Sig ('LAM k k') ks
 
-data Entity :: [Kind] -> Kind -> * where
+data Entity :: Kind -> [Kind] -> * where
 
-    Var :: Sig ks k -> Entity (k ': ks) k
+    Var :: Sig k ks -> Entity k (k ': ks)
 
-    Lft :: Sig ks k -> Entity ks k' -> Entity (k ': ks) k' 
+    Lft :: Sig k ks -> Entity k' ks -> Entity k' (k ': ks)
 
-    Lam :: Entity (k ': ks) k' -> Entity ks ('LAM k k')
+    Lam :: Entity k' (k ': ks) -> Entity ('LAM k k') ks
 
-    App :: Entity ks ('LAM k k') -> Entity ks k -> Entity ks k'
+    App :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks 
 
 instance Eq (Scope ks) where
 
@@ -121,9 +121,9 @@ instance Show (Entity ks k) where
                          show s ++ ") -> " ++ show e ++ ")"
     show (App f e) = "(" ++ show f ++ " " ++ show e ++ ")"
 
-class HasScope (a :: [Kind] -> Kind -> *) where
+class HasScope (a :: Kind -> [Kind] -> *) where
 
-    scope :: a ks k -> Scope ks
+    scope :: a k ks -> Scope ks
 
 instance HasScope Sig where
 
@@ -139,9 +139,9 @@ instance HasScope Entity where
     scope (Lam e)   = tailSC $ scope e
     scope (App f _) = scope f
 
-class Liftable (a :: [Kind] -> Kind -> *) where
+class Liftable (a :: Kind -> [Kind] -> *) where
 
-    lft_ :: Sig ks k -> a ks k' -> a (k ': ks) k'
+    lft_ :: Sig k ks -> a k' ks -> a k' (k ': ks)
 
 instance Liftable Sig where
 
@@ -151,10 +151,10 @@ instance Liftable Entity where
 
     lft_ = insert pE
 
-lft' :: ( Show (a ks k')
+lft' :: ( Show (a k' ks)
         , HasScope a
         , Liftable a
-        ) => Sig ks k -> a ks k' -> Either String (a (k ': ks) k')
+        ) => Sig k ks -> a k' ks -> Either String (a k' (k ': ks))
 lft' s x = let ss = scope s
                sx = scope x
            in if ss == sx
@@ -162,25 +162,25 @@ lft' s x = let ss = scope s
                 else Left  $ "can't lift " ++ show x ++ " (" ++ show sx ++
                              ") to " ++ show s ++ " (" ++ show ss ++ ")"
 
-lft :: ( Show (a ks k')
+lft :: ( Show (a k' ks)
        , HasScope a
        , Liftable a
-       ) => Sig ks k -> a ks k' -> a (k ': ks) k'
+       ) => Sig k ks -> a k' ks -> a k' (k ': ks)
 lft s x = fromRight $ lft' s x
 
-sig :: Entity ks k -> Sig ks k
+sig :: Entity k ks -> Sig k ks
 sig (Var s)   = lft s s
 sig (Lft s e) = lft s $ sig e
 sig (Lam s)   = LamS (sig s)
 sig (App f e) = case sig f of LamS s -> substS pE e s 
 
-show' :: Entity ks k -> String
+show' :: Entity k ks -> String
 show' e = show e ++ " :: " ++ show (sig e)
 
-objS :: Scope ks -> Sig ks 'OBJ
+objS :: Scope ks -> Sig 'OBJ ks
 objS = ObjS
 
-morS' :: Entity ks 'OBJ -> Entity ks 'OBJ -> Either String (Sig ks 'MOR)
+morS' :: Entity 'OBJ ks -> Entity 'OBJ ks -> Either String (Sig 'MOR ks)
 morS' x y = let scX = scope x
                 scY = scope y
             in  if scX == scY
@@ -189,10 +189,10 @@ morS' x y = let scX = scope x
                                  show x ++ " (" ++ show scX ++ ") and " ++
                                  show y ++ " (" ++ show scY ++ ")"
 
-morS :: Entity ks 'OBJ -> Entity ks 'OBJ -> Sig ks 'MOR
+morS :: Entity 'OBJ ks -> Entity 'OBJ ks -> Sig 'MOR ks
 morS x y = fromRight $ morS' x y
 
-prfS' :: Entity ks 'MOR -> Entity ks 'MOR -> Either String (Sig ks 'PRF)
+prfS' :: Entity 'MOR ks -> Entity 'MOR ks -> Either String (Sig 'PRF ks)
 prfS' f g = let scF = scope f
                 scG = scope g
             in if scF == scG && sig f == sig g
@@ -201,20 +201,20 @@ prfS' f g = let scF = scope f
                              show f ++ " (" ++ show scF ++ ") and " ++
                              show g ++ " (" ++ show scG ++ ")"
 
-prfS :: Entity ks 'MOR -> Entity ks 'MOR -> Sig ks 'PRF
+prfS :: Entity 'MOR ks -> Entity 'MOR ks -> Sig 'PRF ks
 prfS f g = fromRight $ prfS' f g
 
-lamS :: Sig (k ': ks) k' -> Sig ks ('LAM k k')
+lamS :: Sig k' (k ': ks) -> Sig ('LAM k k') ks 
 lamS = LamS
 
-var :: Sig ks k -> Entity (k ': ks) k
+var :: Sig k ks -> Entity k (k ': ks)
 var = Var
 
-lam :: forall k k' ks. Entity (k ': ks) k' -> Entity ks ('LAM k k')
+lam :: forall k k' ks. Entity k' (k ': ks) -> Entity ('LAM k k') ks 
 lam (App (Lft _ e) (Var _)) = e     -- eta reduction
 lam e                       = Lam e
 
-app' :: Entity ks ('LAM k k') -> Entity ks k -> Either String (Entity ks k')
+app' :: Entity ('LAM k k') ks -> Entity k ks -> Either String (Entity k' ks)
 app' f g = let scF = scope f
                scG = scope g
            in if scF == scG
@@ -225,17 +225,17 @@ app' f g = let scF = scope f
 
   where
 
-    app'' :: Entity ks ('LAM k k') -> Entity ks k -> Entity ks k'
+    app'' :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks
     app'' (Lam e) g' = subst pE g' e -- beta reduction
     app'' f'      g' = App f' g'
 
-app :: Entity ks ('LAM k k') -> Entity ks k -> Entity ks k'
+app :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks
 app f g = fromRight $ app' f g
 
 tailSC :: Scope (k ': ks) -> Scope ks
 tailSC (Cons s) = scope s
 
-headSC :: Scope (k ': ks) -> Sig ks k
+headSC :: Scope (k ': ks) -> Sig k ks
 headSC (Cons s) = s
 
 lengthSC :: Scope ks -> Natural
@@ -254,7 +254,7 @@ data ScopeM (ks :: [Kind]) :: * where
 
     ConsM :: Model k -> ScopeM ks -> ScopeM (k ': ks)
 
-compile :: Entity ks k -> ScopeM ks -> Model k
+compile :: Entity k ks -> ScopeM ks -> Model k
 compile (Var _)   (ConsM e _)  = e
 compile (Lft _ e) (ConsM _ sc) = compile e sc
 compile (App f g) sc           = compile f sc (compile g sc)
@@ -264,13 +264,13 @@ compile _         _            = error "impossible branch"
 class Insertable (ls :: [Kind]) where
 
     insertSC :: Proxy ls ->
-                Sig ks k -> Scope  (ls :++ ks)   -> Scope  (ls :++ k ': ks)
+                Sig k ks -> Scope    (ls :++ ks) -> Scope    (ls :++ k ': ks)
 
     insertS  :: Proxy ls ->
-                Sig ks k -> Sig    (ls :++ ks) l -> Sig    (ls :++ k ': ks) l
+                Sig k ks -> Sig    l (ls :++ ks) -> Sig    l (ls :++ k ': ks)
 
     insert   :: Proxy ls ->
-                Sig ks k -> Entity (ls :++ ks) l -> Entity (ls :++ k ': ks) l
+                Sig k ks -> Entity l (ls :++ ks) -> Entity l (ls :++ k ': ks)
 
 instance Insertable '[] where
 
@@ -280,12 +280,12 @@ instance Insertable '[] where
     
     insertS _ s (MorS x y) = MorS (insert pE s x) (insert pE s y)
     insertS _ s (PrfS f g) = PrfS (insert pE s f) (insert pE s g)
-    insertS _ s (LamS (t :: Sig (k ': ks) l))
+    insertS _ s (LamS (t :: Sig l (k ': ks)))
                            = LamS (insertS (Proxy :: Proxy '[k]) s t)
 
     insert _ s (Var t)   = Lft s (Var t)
     insert _ s (Lft t e) = Lft s (Lft t e)
-    insert _ s (Lam (e :: Entity (k ': ks) l))
+    insert _ s (Lam (e :: Entity l (k ': ks)))
                          = Lam (insert (Proxy :: Proxy '[k]) s e)
     insert _ s (App f e) = App (insert pE s f) (insert pE s e)
 
@@ -296,26 +296,26 @@ instance Insertable ls => Insertable (l ': ls) where
     insertS p s (ObjS sc)  = ObjS (insertSC p s sc)
     insertS p s (MorS x y) = MorS (insert p s x) (insert p s y)
     insertS p s (PrfS f g) = PrfS (insert p s f) (insert p s g)
-    insertS _ (s :: Sig ks k) (LamS (t :: Sig (m ': l ': ls :++ ks) m'))
+    insertS _ (s :: Sig k ks) (LamS (t :: Sig m' (m ': l ': ls :++ ks)))
                            = LamS (insertS (Proxy :: Proxy (m ': l ': ls)) s t)
 
     insert _ s (Var t)   = Var (insertS (Proxy :: Proxy ls) s t) 
     insert _ s (Lft t e) = let p = Proxy :: Proxy ls
                            in  Lft (insertS p s t) (insert p s e)
-    insert _ (s :: Sig ks k) (Lam (e :: Entity (m ': l ': ls :++ ks) m'))
+    insert _ (s :: Sig k ks) (Lam (e :: Entity m' (m ': l ': ls :++ ks)))
                          = Lam (insert (Proxy :: Proxy (m ': l ': ls)) s e)
     insert p s (App f e) = App (insert p s f) (insert p s e)
 
 class Substitutable (ls :: [Kind]) where
 
     substSC :: Proxy ls ->
-               Entity ks k -> Scope  (ls :++ k ': ks)    -> Scope  (ls :++ ks)
+               Entity k ks -> Scope     (ls :++ k ': ks) -> Scope     (ls :++ ks)
 
     substS  :: Proxy ls ->
-               Entity ks k -> Sig    (ls :++ k ': ks) l' -> Sig    (ls :++ ks) l'
+               Entity k ks -> Sig    l' (ls :++ k ': ks) -> Sig    l' (ls :++ ks)
 
     subst   :: Proxy ls ->
-               Entity ks k -> Entity (ls :++ k ': ks) l' -> Entity (ls :++ ks) l'
+               Entity k ks -> Entity l' (ls :++ k ': ks) -> Entity l' (ls :++ ks)
 
 instance Substitutable '[] where
 
@@ -324,12 +324,12 @@ instance Substitutable '[] where
     substS p e (ObjS sc)  = ObjS (substSC p e sc) 
     substS p e (MorS x y) = MorS (subst p e x) (subst p e y)
     substS p e (PrfS f g) = PrfS (subst p e f) (subst p e g)
-    substS _ e (LamS (t :: Sig (k ': (k' ': ks)) l))
+    substS _ e (LamS (t :: Sig l (k ': (k' ': ks))))
                           = LamS (substS (Proxy :: Proxy '[k]) e t)
 
     subst _ e (Var _)   = e 
     subst _ _ (Lft _ f) = f
-    subst _ e (Lam (f :: Entity (k ': (k' ': ks)) l))
+    subst _ e (Lam (f :: Entity l (k ': (k' ': ks))))
                         = lam (subst (Proxy :: Proxy '[k]) e f)
     subst p e (App f g) = app (subst p e f) (subst p e g)
 
@@ -340,13 +340,13 @@ instance Substitutable ls => Substitutable (l ': ls) where
     substS p e (ObjS sc)  = ObjS (substSC p e sc)
     substS p e (MorS x y) = MorS (subst p e x) (subst p e y)
     substS p e (PrfS f g) = PrfS (subst p e f) (subst p e g)
-    substS _ (e :: Entity ks k') (LamS (t :: Sig (k ': l ': ls :++ k' ': ks) m))
+    substS _ (e :: Entity k' ks) (LamS (t :: Sig m (k ': l ': ls :++ k' ': ks)))
                           = LamS $ substS (Proxy :: Proxy (k ': l ': ls)) e t
 
     subst _ e (Var s)   = Var $ substS (Proxy :: Proxy ls) e s
     subst _ e (Lft s f) = let p = Proxy :: Proxy ls
                           in  Lft (substS p e s) (subst p e f)
-    subst _ (e :: Entity ks k') (Lam (f :: Entity (k ': (l ': ls :++ k' ': ks)) m))
+    subst _ (e :: Entity k' ks) (Lam (f :: Entity m (k ': (l ': ls :++ k' ': ks))))
                         = lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
     subst p e (App f g) = app (subst p e f) (subst p e g)
 

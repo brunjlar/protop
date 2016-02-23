@@ -31,9 +31,9 @@ import Protop.Logic.Types
 
 class Typeable ks => Simple (ks :: [Kind]) where
 
-    lamS_ :: Simple' k => Sig    ks k -> SIG
+    lamS_ :: Simple' k => Sig    k ks -> SIG
 
-    lam_  :: Simple' k => Entity ks k -> ENTITY
+    lam_  :: Simple' k => Entity k ks -> ENTITY
 
 instance Simple '[] where
 
@@ -49,7 +49,7 @@ instance (Simple ks, Simple' k') => Simple (k' ': ks) where
 
 class Typeable k => Simple' (k :: Kind) where
 
-    app_ :: Typeable ks => Entity ks k -> ENTITY -> ENTITY
+    app_ :: Typeable ks => Entity k ks -> ENTITY -> ENTITY
 
 instance Simple' 'OBJ where
 
@@ -65,7 +65,7 @@ instance Simple' 'PRF where
 
 instance (Simple' k, Simple' k') => Simple' ('LAM k k') where
 
-    app_ (e :: Entity ks ('LAM k k')) (ENTITY (f :: Entity ls l))
+    app_ (e :: Entity ('LAM k k') ks) (ENTITY (f :: Entity l ls))
         = case (eqT :: Maybe (ks :~: ls), eqT :: Maybe (k :~: l)) of
             (Just Refl, Just Refl) -> ENTITY $ app e f
             (_        , _        ) ->
@@ -79,11 +79,11 @@ data SCOPE where
 
 data SIG where
 
-    SIG :: (Simple ks , Simple' k) => Sig ks k -> SIG
+    SIG :: (Simple ks , Simple' k) => Sig k ks -> SIG
 
 data ENTITY where
 
-    ENTITY :: (Simple ks, Simple' k) => Entity ks k -> ENTITY
+    ENTITY :: (Simple ks, Simple' k) => Entity k ks -> ENTITY
 
 instance Eq SCOPE where
 
@@ -94,15 +94,15 @@ instance Eq SCOPE where
 
 instance Eq SIG where
 
-    SIG (s :: Sig ks k) == SIG (t :: Sig ls l)
-        = case eqT :: Maybe (Sig ks k :~: Sig ls l) of
+    SIG (s :: Sig k ks) == SIG (t :: Sig l ls)
+        = case eqT :: Maybe (Sig k ks :~: Sig l ls) of
             Just Refl -> s == t
             Nothing   -> False
 
 instance Eq ENTITY where
 
-    ENTITY (e :: Entity ks k) == ENTITY (f :: Entity ls l)
-        = case eqT :: Maybe (Entity ks k :~: Entity ls l) of
+    ENTITY (e :: Entity k ks) == ENTITY (f :: Entity l ls)
+        = case eqT :: Maybe (Entity k ks :~: Entity l ls) of
             Just Refl -> e == f
             Nothing   -> False
 
@@ -125,16 +125,16 @@ showE :: ENTITY -> String
 showE (ENTITY e) = show' e
 
 lftSIG :: SIG -> SIG -> SIG
-lftSIG (SIG (s :: Sig ks k))
-       (SIG (t :: Sig ls l)) =
+lftSIG (SIG (s :: Sig k ks))
+       (SIG (t :: Sig l ls)) =
     case (eqT :: Maybe (ks :~: ls)) of
         Just Refl -> SIG $ lft s t
         Nothing   -> error $ "can't lift " ++ show t ++ " (" ++ show (scope t) ++
                              ") by " ++ show s ++ " (" ++ show (scope s) ++ ")"
 
 lftE :: SIG -> ENTITY -> ENTITY
-lftE (SIG    (s :: Sig    ks k))
-     (ENTITY (e :: Entity ls l)) =
+lftE (SIG    (s :: Sig    k ks))
+     (ENTITY (e :: Entity l ls)) =
     case (eqT :: Maybe (ks :~: ls)) of
         Just Refl -> ENTITY $ lft s e
         Nothing   -> error  $ "can't lift " ++ show e ++ " (" ++ show (scope e) ++
@@ -152,18 +152,18 @@ objSIG :: SCOPE -> SIG
 objSIG (SCOPE sc) = SIG $ objS sc
 
 morSIG :: ENTITY -> ENTITY -> SIG
-morSIG (ENTITY (x :: Entity ks k))
-       (ENTITY (y :: Entity ls l)) =
-    case (eqT :: Maybe (k :~: 'OBJ), eqT :: Maybe (Entity ks k :~: Entity ls l)) of
+morSIG (ENTITY (x :: Entity k ks))
+       (ENTITY (y :: Entity l ls)) =
+    case (eqT :: Maybe (k :~: 'OBJ), eqT :: Maybe (Entity k ks :~: Entity l ls)) of
         (Just Refl, Just Refl) -> SIG $ morS x y
         (_        , _        ) -> error $ "can't make a morphism signature from entities " ++
                                           show x ++ " (" ++ show (scope x) ++ ") and " ++
                                           show y ++ " (" ++ show (scope y) ++ ")"
 
 prfSIG :: ENTITY -> ENTITY -> SIG
-prfSIG (ENTITY (f :: Entity ks k))
-       (ENTITY (g :: Entity ls l)) =
-    case (eqT :: Maybe (k :~: 'MOR), eqT :: Maybe (Entity ks k :~: Entity ls l)) of
+prfSIG (ENTITY (f :: Entity k ks))
+       (ENTITY (g :: Entity l ls)) =
+    case (eqT :: Maybe (k :~: 'MOR), eqT :: Maybe (Entity k ks :~: Entity l ls)) of
         (Just Refl, Just Refl) -> SIG $ prfS f g
         (_        , _        ) -> error $ "can't make a proof signature from entities " ++
                                           show f ++ " (" ++ show (scope f) ++ ") and " ++

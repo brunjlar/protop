@@ -157,7 +157,7 @@ compileSpec = describe "compile" $ do
             c  = compile e $ ConsM prodObject EmptyM
         c (Object N) `shouldBe` (Object $ N :* N)
         
-prodSig :: Sig '[] ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
+prodSig :: Sig ('LAM 'OBJ ('LAM 'OBJ 'OBJ)) '[]
 prodSig = let sx = objS Empty
               x  = var sx
               sy = objS (scope x)
@@ -167,8 +167,9 @@ prodSig = let sx = objS Empty
               l2 = lamS l1
           in  l2
 
-xxEntity :: Entity '[] ('LAM ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
-                             ('LAM 'OBJ 'OBJ))
+xxEntity :: Entity ('LAM ('LAM 'OBJ ('LAM 'OBJ 'OBJ))
+                         ('LAM 'OBJ 'OBJ))
+                   '[]
 xxEntity = let sp  = prodSig
                p   = var sp
                sx  = objS (scope p)
@@ -180,7 +181,7 @@ xxEntity = let sp  = prodSig
                l'  = lam l
            in  l'
 
-idSig :: Sig '[] ('LAM 'OBJ 'MOR)
+idSig :: Sig ('LAM 'OBJ 'MOR) '[]
 idSig = let sx = objS Empty
             x  = var sx
             ms = morS x x
