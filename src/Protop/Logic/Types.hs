@@ -30,6 +30,8 @@ module Protop.Logic.Types
     , app
     , sgm'
     , sgm
+    , first
+    , second
     , show'
     , ScopeM(..)
     , Model
@@ -78,7 +80,7 @@ data Entity :: Kind -> [Kind] -> * where
 
     App :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks 
 
-    Sgm :: Sig k' (k ': ks) -> Entity k ks -> Entity k' ks -> Entity ('SGM k k') ks
+    Sgm :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Entity ('SGM k k') ks
 
 instance Eq (Scope ks) where
 
@@ -135,7 +137,7 @@ instance Show (Entity ks k) where
                        in  "(\\(%" ++ show (lengthSC sc) ++ " :: " ++
                            show s ++ ") -> " ++ show e ++ ")"
     show (App f e)   = "(" ++ show f ++ " " ++ show e ++ ")"
-    show (Sgm _ e f) = "<" ++ show e ++ " " ++ show f ++ ">"
+    show (Sgm _ e f) = "<" ++ show e ++ ", " ++ show f ++ ">"
 
 class HasScope (a :: [Kind] -> *) where
 
@@ -159,7 +161,7 @@ instance HasScope (Entity k) where
     scope (Lft s _)   = Cons s
     scope (Lam e)     = tailSC $ scope e
     scope (App f _)   = scope f
-    scope (Sgm _ e _) = scope e
+    scope (Sgm s _ _) = scope s
 
 class Liftable (a :: Kind -> [Kind] -> *) where
 
@@ -195,7 +197,7 @@ sig (Var s)     = lft s s
 sig (Lft s e)   = lft s $ sig e
 sig (Lam s)     = LamS (sig s)
 sig (App f e)   = case sig f of LamS s -> substS pE e s 
-sig (Sgm s _ _) = SgmS s
+sig (Sgm s _ _) = s
 
 show' :: Entity k ks -> String
 show' e = show e ++ " :: " ++ show (sig e)
@@ -258,22 +260,35 @@ app' f g = let scF = scope f
 app :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks
 app f g = fromRight $ app' f g
 
-sgm' :: Sig k' (k ': ks) -> Entity k ks -> Entity k' ks -> Either String (Entity ('SGM k k') ks)
-sgm' s e f = let sc = scope s
-                 t  = headSC sc
-                 se = sig e
+sgm' :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Either String (Entity ('SGM k k') ks)
+sgm' s e f = let se = sig e 
+                 t  = firstS s
              in  if se /= t
                     then Left $ show e ++ " has signature " ++ show se ++ 
                                 ", but expected " ++ show t
-                    else let r  = substS pE e s
+                    else let r  = substS pE e $ secondS s
                              sf = sig f
                          in if sf /= r
                             then Left  $ show f ++ " has signature " ++ show sf ++
                                          ", but expected " ++ show r
                             else Right $ Sgm s e f
 
-sgm :: Sig k' (k ': ks) -> Entity k ks -> Entity k' ks -> Entity ('SGM k k') ks
+sgm :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Entity ('SGM k k') ks
 sgm s e f = fromRight $ sgm' s e f
+
+firstS :: Sig ('SGM k k') ks -> Sig k ks
+firstS (SgmS s) = let sc = scope s in headSC sc
+
+secondS :: Sig ('SGM k k') ks -> Sig k' (k ': ks)
+secondS (SgmS s) = s
+
+first :: Entity ('SGM k k') ks -> Entity k ks
+first (Sgm _ e _) = e
+first _           = error "impossible branch"
+
+second :: Entity ('SGM k k') ks -> Entity k' ks
+second (Sgm _ _ f) = f
+second _           = error "impossible branch"
 
 tailSC :: Scope (k ': ks) -> Scope ks
 tailSC (Cons s) = scope s
@@ -330,17 +345,12 @@ instance Insertable '[] where
     insertS _ s (SgmS (t :: Sig l (k ': ks)))
                            = SgmS (insertS (Proxy :: Proxy '[k]) s t)
 
-    insert _ s (Var t)   = Lft s (Var t)
-    insert _ s (Lft t e) = Lft s (Lft t e)
+    insert _ s (Var t)     = Lft s (Var t)
+    insert _ s (Lft t e)   = Lft s (Lft t e)
     insert _ s (Lam (e :: Entity l (k ': ks)))
-                         = Lam (insert (Proxy :: Proxy '[k]) s e)
-    insert _ s (App f e) = App (insert pE s f) (insert pE s e)
-    insert _ s (Sgm (t :: Sig l (k ': ks))
-                    (e :: Entity k ks)
-                    (f :: Entity l ks))
-                         = Sgm (insertS (Proxy :: Proxy '[k]) s t)
-                               (insert  pE                    s e)
-                               (insert  pE                    s f)
+                           = Lam (insert (Proxy :: Proxy '[k]) s e)
+    insert _ s (App f e)   = App (insert pE s f) (insert pE s e)
+    insert _ s (Sgm t e f) = Sgm (insertS pE s t) (insert pE s e) (insert pE s f)
 
 instance Insertable ls => Insertable (l ': ls) where
 
@@ -354,18 +364,13 @@ instance Insertable ls => Insertable (l ': ls) where
     insertS _ (s :: Sig k ks) (SgmS (t :: Sig m' (m ': l ': ls :++ ks)))
                            = SgmS (insertS (Proxy :: Proxy (m ': l ': ls)) s t)
 
-    insert _ s (Var t)   = Var (insertS (Proxy :: Proxy ls) s t) 
-    insert _ s (Lft t e) = let p = Proxy :: Proxy ls
-                           in  Lft (insertS p s t) (insert p s e)
+    insert _ s (Var t)     = Var (insertS (Proxy :: Proxy ls) s t) 
+    insert _ s (Lft t e)   = let p = Proxy :: Proxy ls
+                             in  Lft (insertS p s t) (insert p s e)
     insert _ (s :: Sig k ks) (Lam (e :: Entity m' (m ': l ': ls :++ ks)))
-                         = Lam (insert (Proxy :: Proxy (m ': l ': ls)) s e)
-    insert p s (App f e) = App (insert p s f) (insert p s e)
-    insert p (s :: Sig k ks) (Sgm (t :: Sig m' (m ': l ': ls :++ ks))
-                                  (e :: Entity m  (l ': ls :++ ks))
-                                  (f :: Entity m' (l ': ls :++ ks)))
-                         = Sgm (insertS (Proxy :: Proxy (m ': l ': ls)) s t)
-                               (insert  p                               s e)
-                               (insert  p                               s f)
+                           = Lam (insert (Proxy :: Proxy (m ': l ': ls)) s e)
+    insert p s (App f e)   = App (insert p s f) (insert p s e)
+    insert p s (Sgm t e f) = Sgm (insertS p s t) (insert p s e) (insert p s f)
 
 class Substitutable (ls :: [Kind]) where
 
@@ -390,17 +395,12 @@ instance Substitutable '[] where
     substS _ e (SgmS (t :: Sig l (k ': (k' ': ks))))
                           = SgmS (substS (Proxy :: Proxy '[k]) e t)
 
-    subst _ e (Var _)   = e 
-    subst _ _ (Lft _ f) = f
+    subst _ e (Var _)     = e 
+    subst _ _ (Lft _ f)   = f
     subst _ e (Lam (f :: Entity l (k ': (k' ': ks))))
-                        = lam (subst (Proxy :: Proxy '[k]) e f)
-    subst p e (App f g) = app (subst p e f) (subst p e g)
-    subst p e (Sgm (t :: Sig l (k ': (k' ': ks)))
-                   (f :: Entity k (k' ': ks))
-                   (g :: Entity l (k' ': ks)))
-                        = Sgm (substS (Proxy :: Proxy '[k]) e t)
-                              (subst  p                     e f)
-                              (subst  p                     e g)
+                          = lam (subst (Proxy :: Proxy '[k]) e f)
+    subst p e (App f g)   = app (subst p e f) (subst p e g)
+    subst p e (Sgm s f g) = sgm (substS p e s) (subst p e f) (subst p e g)
 
 instance Substitutable ls => Substitutable (l ': ls) where
 
@@ -414,18 +414,13 @@ instance Substitutable ls => Substitutable (l ': ls) where
     substS _ (e :: Entity k' ks) (SgmS (t :: Sig m (k ': l ': ls :++ k' ': ks)))
                           = SgmS $ substS (Proxy :: Proxy (k ': l ': ls)) e t
 
-    subst _ e (Var s)   = Var $ substS (Proxy :: Proxy ls) e s
-    subst _ e (Lft s f) = let p = Proxy :: Proxy ls
-                          in  Lft (substS p e s) (subst p e f)
+    subst _ e (Var s)     = Var $ substS (Proxy :: Proxy ls) e s
+    subst _ e (Lft s f)   = let p = Proxy :: Proxy ls
+                            in  Lft (substS p e s) (subst p e f)
     subst _ (e :: Entity k' ks) (Lam (f :: Entity m (k ': (l ': ls :++ k' ': ks))))
-                        = lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
-    subst p e (App f g) = app (subst p e f) (subst p e g)
-    subst p (e :: Entity k' ks) (Sgm (t :: Sig m (k ': l ': ls :++ k' ': ks))
-                                     (f :: Entity k (l ': ls :++ k' ': ks))
-                                     (g :: Entity m (l ': ls :++ k' ': ks)))
-                        = Sgm (substS (Proxy :: Proxy (k ': l ': ls)) e t)
-                              (subst  p                               e f)
-                              (subst  p                               e g)
+                          = lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
+    subst p e (App f g)   = app (subst p e f) (subst p e g)
+    subst p e (Sgm s f g) = sgm (substS p e s) (subst p e f) (subst p e g)
 
 class SCLiftable (a :: [Kind] -> *) where
 

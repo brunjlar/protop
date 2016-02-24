@@ -12,9 +12,11 @@ spec = do
     morSSpec
     prfSSpec
     lamSSpec
+    sgmSSpec
     varSpec
     lamSpec
     appSpec
+    sgmSpec
     compileSpec
 
 objSSpec :: Spec
@@ -58,8 +60,16 @@ lamSSpec = describe "lamS" $
     it "should create a simple lambda signature" $ do
         let s = prodSig
 
-        show s    `shouldBe` "(\\(%1 :: Ob) -> (\\(%2 :: Ob) -> Ob))"
-        scope s  `shouldBe` Empty
+        show s  `shouldBe` "(\\(%1 :: Ob) -> (\\(%2 :: Ob) -> Ob))"
+        scope s `shouldBe` Empty
+
+sgmSSpec :: Spec
+sgmSSpec = describe "sgmS" $
+
+    it "should create a simple sigma signature" $ do
+        let s = sgmSig
+        show s  `shouldBe` "(Ex (%2 :: Ob) (%2 -> %1))"
+        scope s `shouldBe` (Cons $ objS Empty)
 
 varSpec :: Spec
 varSpec = describe "var" $
@@ -138,6 +148,20 @@ appSpec = describe "app" $ do
             l  = q `app` p
         show l `shouldBe` "(\\(%2 :: Ob) -> ((%1 %2) %2))"
 
+sgmSpec :: Spec
+sgmSpec = describe "sgm" $
+
+    it "should create a simple sigma entity" $ do
+        let i  = var idSig
+            sx = lft idSig $ objS Empty
+            x  = var sx
+            s  = scLft (scope i) sgmSig
+            i' = lft sx i
+            f  = app i' x
+            ex = sgm s x f
+        show ex  `shouldBe` "<%2, (%1 %2)>"
+        scope ex `shouldBe` Cons sx
+
 compileSpec :: Spec
 compileSpec = describe "compile" $ do
 
@@ -189,3 +213,12 @@ idSig = let sx = objS Empty
 
 prodObject :: Object -> Object -> Object
 prodObject (Object x) (Object y) = Object (x :* y)
+
+sgmSig :: Sig ('SGM 'OBJ 'MOR) '[ 'OBJ ]
+sgmSig = let sx = objS Empty
+             x  = var sx
+             sy = objS (scope x)
+             y  = var sy
+             x' = lft sy x
+             sf = morS y x'
+         in  sgmS sf
