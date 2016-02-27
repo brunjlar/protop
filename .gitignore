@@ -1,3 +1,5 @@
 .stack-work/
 *.swp
 tags
+codex.tags
+hscope.out
