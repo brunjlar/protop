@@ -34,8 +34,10 @@ library
                      , Protop.Core.Transitivities
                      , Protop.Logic
                      , Protop.Logic.Builder
+                     , Protop.Logic.NewBuilder
                      , Protop.Logic.Simple
                      , Protop.Logic.Types
+                     , Protop.IndexedState
                      , Protop.TVault
                      , Protop.Utility
   ghc-options:         -Wall
@@ -54,7 +56,9 @@ test-suite protop-test
                      , protop
   other-modules:       Protop.Core.NaturalSpec
                      , Protop.Core.OmegaSpec
+                     , Protop.IndexedStateSpec
                      , Protop.Logic.BuilderSpec
+                     , Protop.Logic.NewBuilderSpec
                      , Protop.Logic.TypesSpec
                      , Protop.TVaultSpec
   ghc-options:         -Wall -threaded
