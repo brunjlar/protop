@@ -36,9 +36,11 @@ library
                      , Protop.Logic.Builder
                      , Protop.Logic.Simple
                      , Protop.Logic.Types
+                     , Protop.TVault
                      , Protop.Utility
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
+                     , containers
                      , hspec
                      , mtl
   default-language:    Haskell2010
@@ -54,6 +56,7 @@ test-suite protop-test
                      , Protop.Core.OmegaSpec
                      , Protop.Logic.BuilderSpec
                      , Protop.Logic.TypesSpec
+                     , Protop.TVaultSpec
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
 
