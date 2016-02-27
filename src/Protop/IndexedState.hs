@@ -2,8 +2,6 @@ module Protop.IndexedState
     ( IState(..)
     , evalIState
     , execIState
-    , fmap
-    , (<$>)
     , return
     , (>>=)
     , (>>)
@@ -15,7 +13,7 @@ module Protop.IndexedState
     ) where
 
 import Control.Arrow  (first)
-import Prelude hiding (fmap, (<$>), return, (>>=), (>>), fail)
+import Prelude hiding (return, (>>=), (>>), fail)
 
 newtype IState i o a = IState { runIState :: i -> (a, o) }
 
@@ -25,12 +23,9 @@ evalIState s i = fst $ runIState s i
 execIState :: IState i o a -> i -> o
 execIState s i = snd $ runIState s i
 
-fmap :: (a -> b) -> IState i o a -> IState i o b
-fmap f s = IState $ first f . runIState s
+instance Functor (IState i o) where
 
-infixl 4 <$>
-(<$>) :: (a -> b) -> IState i o a -> IState i o b
-(<$>) = fmap
+    fmap f s = IState $ first f . runIState s
 
 return :: a -> IState s s a
 return a = IState $ \s -> (a, s)

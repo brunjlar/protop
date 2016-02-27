@@ -1,7 +1,7 @@
 module Protop.IndexedStateSpec (spec) where
 
 import Control.Arrow       ((&&&))
-import Prelude hiding      (fmap, (<$>), return, (>>=), (>>), fail)
+import Prelude hiding      (return, (>>=), (>>), fail)
 import Protop.IndexedState
 import Test.Hspec
 
