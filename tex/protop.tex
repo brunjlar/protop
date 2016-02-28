@@ -1,0 +1,237 @@
+\documentclass[12pt,a4paper,twoside]{article}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{eucal}
+\usepackage[all]{xy}
+
+\pagestyle{headings}
+\setlength{\topmargin}{-15mm}
+\setlength{\headheight}{1cm}
+\setlength{\textheight}{25cm}
+\setlength{\topskip}{-2cm}
+\setlength{\oddsidemargin}{0cm}
+\setlength{\evensidemargin}{0cm}
+\setlength{\textwidth}{16cm}
+\newlength{\abstand}
+\setlength{\abstand}{5 mm}
+
+\def\Set{{\mathbf{Set}}}
+\def\SetER{{\Set_{\text{ER}}}}
+\def\SetEER{{\Set_{\text{ERR}}}}
+\def\refl{{\text{refl}}}
+\def\symm{{\text{symm}}}
+\def\trans{{\text{trans}}}
+
+\swapnumbers
+\theoremstyle{definition}
+\newtheorem{defi}{Definition}[section]
+\newtheorem{bsp}[defi]{Example}
+\newtheorem{bspe}[defi]{Examples}
+\newtheorem{satzdefi}[defi]{Proposition/ Definition}
+\newtheorem{lemma}[defi]{Lemma}
+\newtheorem{lemmadefi}[defi]{Lemma/ Definition}
+\newtheorem{rem}[defi]{Remark}
+\newtheorem{satz}[defi]{Proposition}
+\newtheorem{thm}[defi]{Theorem}
+\newtheorem{cor}[defi]{Corollary}
+
+\renewcommand{\qed}{{\bf q.e.d.}}
+\renewcommand{\theenumi}{(\roman{enumi})}
+\renewcommand{\labelenumi}{\theenumi}
+\renewcommand{\theenumii}{(\arabic{enumii})}
+\renewcommand{\labelenumii}{\theenumii}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+\hbadness=10000
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\pagestyle{headings}
+
+\title{Protop - Topos Programming}
+\author{Lars Br\"unjes}
+\date{\today}
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Explicit equivalence relations}
+
+\vspace{\abstand}
+
+As a warm-up, let us look at \emph{sets with equivalence relations}:
+
+\begin{defi}\label{defSetER}
+    Let us consider the category $\SetER$ of \emph{sets with equivalence relations}:
+    \emph{Objects} are pairs $(A,\sim_A)$, consisting of a set $A$ and an
+    equivalence relation $\sim_A$ on $A$,
+    and a morphism $\left[f\right]:\ (A,\sim_A)\rightarrow(B,\sim_B)$ is an
+    equivalence class of functions
+    $f:\ A\rightarrow B$ that respect the equivalence relations, i.e.
+    \[
+        \forall x,y\in A:\ x\sim_Ay\Rightarrow fx\sim_Bfy,
+    \]
+    where two such functions $f$ and $g$ are \emph{equivalent} iff
+    \[
+        \forall x\in A:\ fx\sim_Bgx.
+    \]
+\end{defi}
+
+\vspace{\abstand}
+
+\begin{lemma}\label{lemmaSetERSet}
+    Let $\Set\rightarrow\SetER$ be the functor given by sending a set $A$ to
+    the pair $(A,=_A)$ (with equivalence given by equality). This is an
+    equivalence of categories, and its inverse is given by sending a pair
+    $(A,\sim_A)$ to $A/\sim_A$, the set of equivalence classes.
+\end{lemma}
+
+\vspace{\abstand}
+
+\begin{proof}
+    This is trivial and immediately follows from the definitions of $\SetER$
+    and of equivalence relations and equivalence classes.
+\end{proof}
+
+\vspace{\abstand}
+
+An equivalence relation on a set $A$ tells us which elements of that set are
+equivalent, but it carries no further information. In particular, it does not
+tell us \emph{why} two elements of $A$ are equivalent.
+
+We will later need such extra information, which leads us to the idea of
+\emph{enriching} the equivalence relations and to the study of the category
+$\SetEER$ of sets with \emph{enriched} (or \emph {explicit}) equivalence
+relations:
+
+\begin{defi}\label{defEERSetEER}
+    We will first define what we mean by an "enriched equivalence relation"
+    and the use those enriched equivalence relations to define the category
+    $\SetEER$ in analogy to $\SetER$ above.
+    \begin{enumerate}
+        \item\label{defEER}
+            Let $A$ be a set. An \emph{enriched equivalence relation (EER)} on $A$
+            is given by the following data:
+            \begin{enumerate}
+                \item
+                    A set $R_A$ and two maps $l_A,r_A:P_A\rightarrow A$.
+                    (The interpretation of an element $p$ of $P_A$ is that of a
+                    "proof" that $l_Ap$ and $r_Ap$ are equivalent.)
+                \item
+                    A map $\refl_A:A\rightarrow P_A$ that is a section of
+                    both $l_A$ and $r_A$, i.e.
+                    \[
+                        l_A\,\refl_A\ =r_A\,\refl_A\ =1_A.
+                    \]
+                    (This map represents \emph{reflexivity}, the fact that
+                    each element of $A$ is equivalent to itself.)
+                \item
+                    A map $\symm_A:P_A\rightarrow P_A$ satisfying
+                    \[
+                        l_A\,\symm_A\ =\ r_A
+                        \;\;\;\text{and}\;\;\;
+                        r_A\,\symm_A\ =\ l_A.
+                    \]
+                    (This is \emph{symmetry}, stating that for $x,y\in A$,
+                    $x$ is equivalent to $y$ iff $y$ is equivalent to $x$.)
+                \item
+                    A \emph{partial} map $\trans_A:P_A\times P_A\rightarrow P_A$,
+                    defined for pairs $(p,q)$ with $r_Ap=l_Aq$, such that
+                    \[
+                        \forall p,q\in P_A:\ r_Ap=l_Aq\
+                        \Rightarrow\
+                        l_A\,\trans_A(p,q)\ = l_Ap
+                        \;\;\wedge\;\;
+                        r_A\,\trans_A(p,q)\ = r_Aq.
+                    \]
+                    (This is \emph{transitivity}, stating that for $x,y,z\in A$,
+                    if $x$ and $y$ are equivalent as well as $y$ and $z$, then
+                    so are $x$ and $z$.)
+            \end{enumerate}
+        \item\label{defSetEER}
+            We now define the category $\SetEER$ as follows: \emph{Objects}
+            of $\SetEER$ are pairs $(A,P_A)$, where $A$ is a set
+            and $P_A=(P_A,l_A,r_A,\refl_A,\symm_A,\trans_A)$ 
+            is an enriched equivalence relation on $A$.
+            \emph{Morphisms} $\left[(f,f_P)\right]:\,(A,P_A)\rightarrow(B,P_B)$
+            are equivalence classes of pairs $(f,f_P)$, where
+            $f:A\rightarrow B$ and $f_P:A_P\rightarrow B_P$ are maps that
+            "respect" the enriched equivalence relations in the following sense:
+            \[
+                l_Bf_P\ =\ fl_A
+                \;\;\;\text{and}\;\;\;
+                r_Bf_P\ =\ fr_A.
+            \]
+            Two pairs $(f,f_P)$ and $(g,g_P)$ are \emph{equivalent} iff
+            there is a map $p_{fg}:A\rightarrow P_B$ with
+            \[
+                l_b\,p_{fg}\ =\ f
+                \;\;\;\text{and}\;\;\;
+                r_b\,p_{fg}\ =\ g.
+            \]
+            (The interpretation of morphisms is that of maps which
+            respect equivalence. Two maps define the same morphism if they map
+            each element to equivalent elements.)
+    \end{enumerate}
+\end{defi}
+
+\vspace{\abstand}
+
+\begin{rem}\label{remfsuperfluous}
+    For a morphism $[(f,f_P)]:(A,P_A)\rightarrow(B,P_B)$, the map $f$
+    is uniquely determined by $f_P$:
+    \[
+        f\ =\ 
+        l_B\,f_P\,\refl_A\ =\ 
+        r_B\,f_P\,\refl_A,
+    \]
+    so we could have defined morphisms in $\SetEER$ solely in terms of $f_P$.
+    But $f$ is the "underlying", induced map on sets, so we prefer to mention
+    it explicitly.
+\end{rem}
+
+\vspace{\abstand}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle{alpha}
+\bibliography{Literatur}
+
+\end{document}
