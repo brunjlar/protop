@@ -14,6 +14,7 @@ module Protop.Logic.Types
     , Sig
     , Entity
     , HasScope(..)
+    , Liftable
     , lft'
     , lft
     , sig
@@ -62,9 +63,9 @@ data Sig :: Kind -> [Kind] -> * where
 
     ObjS :: Scope ks -> Sig 'OBJ ks
 
-    MorS :: Entity 'OBJ ks -> Entity 'OBJ ks -> Sig 'MOR ks 
+    MorS :: Entity 'OBJ ks -> Entity 'OBJ ks -> Sig 'MOR ks
 
-    PrfS :: Entity 'MOR ks -> Entity 'MOR ks -> Sig 'PRF ks 
+    PrfS :: Entity 'MOR ks -> Entity 'MOR ks -> Sig 'PRF ks
 
     LamS :: Sig k' (k ': ks) -> Sig ('LAM k k') ks
 
@@ -78,7 +79,7 @@ data Entity :: Kind -> [Kind] -> * where
 
     Lam :: Entity k' (k ': ks) -> Entity ('LAM k k') ks
 
-    App :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks 
+    App :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks
 
     Sgm :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Entity ('SGM k k') ks
 
@@ -175,19 +176,16 @@ instance Liftable Entity where
 
     lft_ = insert pE
 
-lft' :: ( Show (a k' ks)
-        , HasScope (a k')
+lft' :: ( HasScope (a k')
         , Liftable a
         ) => Sig k ks -> a k' ks -> Either String (a k' (k ': ks))
 lft' s x = let ss = scope s
                sx = scope x
            in if ss == sx
                 then Right $ lft_ s x
-                else Left  $ "can't lift " ++ show x ++ " (" ++ show sx ++
-                             ") to " ++ show s ++ " (" ++ show ss ++ ")"
+                else Left    "incompatible scopes"
 
-lft :: ( Show (a k' ks)
-       , HasScope (a k')
+lft :: ( HasScope (a k')
        , Liftable a
        ) => Sig k ks -> a k' ks -> a k' (k ': ks)
 lft s x = fromRight $ lft' s x
@@ -196,7 +194,7 @@ sig :: Entity k ks -> Sig k ks
 sig (Var s)     = lft s s
 sig (Lft s e)   = lft s $ sig e
 sig (Lam s)     = LamS (sig s)
-sig (App f e)   = case sig f of LamS s -> substS pE e s 
+sig (App f e)   = case sig f of LamS s -> substS pE e s
 sig (Sgm s _ _) = s
 
 show' :: Entity k ks -> String
@@ -229,7 +227,7 @@ prfS' f g = let scF = scope f
 prfS :: Entity 'MOR ks -> Entity 'MOR ks -> Sig 'PRF ks
 prfS f g = fromRight $ prfS' f g
 
-lamS :: Sig k' (k ': ks) -> Sig ('LAM k k') ks 
+lamS :: Sig k' (k ': ks) -> Sig ('LAM k k') ks
 lamS = LamS
 
 sgmS :: Sig k' (k ': ks) -> Sig ('SGM k k') ks
@@ -238,7 +236,7 @@ sgmS = SgmS
 var :: Sig k ks -> Entity k (k ': ks)
 var = Var
 
-lam :: forall k k' ks. Entity k' (k ': ks) -> Entity ('LAM k k') ks 
+lam :: forall k k' ks. Entity k' (k ': ks) -> Entity ('LAM k k') ks
 lam (App (Lft _ e) (Var _)) = e     -- eta reduction
 lam e                       = Lam e
 
@@ -261,10 +259,10 @@ app :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks
 app f g = fromRight $ app' f g
 
 sgm' :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Either String (Entity ('SGM k k') ks)
-sgm' s e f = let se = sig e 
+sgm' s e f = let se = sig e
                  t  = firstS s
              in  if se /= t
-                    then Left $ show e ++ " has signature " ++ show se ++ 
+                    then Left $ show e ++ " has signature " ++ show se ++
                                 ", but expected " ++ show t
                     else let r  = substS pE e $ secondS s
                              sf = sig f
@@ -337,7 +335,7 @@ instance Insertable '[] where
     insertSC _ s _ = Cons s
 
     insertS _ s (ObjS sc)  = ObjS (insertSC pE s sc)
-    
+
     insertS _ s (MorS x y) = MorS (insert pE s x) (insert pE s y)
     insertS _ s (PrfS f g) = PrfS (insert pE s f) (insert pE s g)
     insertS _ s (LamS (t :: Sig l (k ': ks)))
@@ -364,7 +362,7 @@ instance Insertable ls => Insertable (l ': ls) where
     insertS _ (s :: Sig k ks) (SgmS (t :: Sig m' (m ': l ': ls :++ ks)))
                            = SgmS (insertS (Proxy :: Proxy (m ': l ': ls)) s t)
 
-    insert _ s (Var t)     = Var (insertS (Proxy :: Proxy ls) s t) 
+    insert _ s (Var t)     = Var (insertS (Proxy :: Proxy ls) s t)
     insert _ s (Lft t e)   = let p = Proxy :: Proxy ls
                              in  Lft (insertS p s t) (insert p s e)
     insert _ (s :: Sig k ks) (Lam (e :: Entity m' (m ': l ': ls :++ ks)))
@@ -387,7 +385,7 @@ instance Substitutable '[] where
 
     substSC _ _ = tailSC
 
-    substS p e (ObjS sc)  = ObjS (substSC p e sc) 
+    substS p e (ObjS sc)  = ObjS (substSC p e sc)
     substS p e (MorS x y) = MorS (subst p e x) (subst p e y)
     substS p e (PrfS f g) = PrfS (subst p e f) (subst p e g)
     substS _ e (LamS (t :: Sig l (k ': (k' ': ks))))
@@ -395,7 +393,7 @@ instance Substitutable '[] where
     substS _ e (SgmS (t :: Sig l (k ': (k' ': ks))))
                           = SgmS (substS (Proxy :: Proxy '[k]) e t)
 
-    subst _ e (Var _)     = e 
+    subst _ e (Var _)     = e
     subst _ _ (Lft _ f)   = f
     subst _ e (Lam (f :: Entity l (k ': (k' ': ks))))
                           = lam (subst (Proxy :: Proxy '[k]) e f)

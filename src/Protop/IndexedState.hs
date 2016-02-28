@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Protop.IndexedState
     ( IState(..)
     , evalIState
@@ -26,6 +28,14 @@ execIState s i = snd $ runIState s i
 instance Functor (IState i o) where
 
     fmap f s = IState $ first f . runIState s
+
+instance Applicative (IState s s) where
+
+    pure = return
+
+    mf <*> mx = mf >>= \f ->
+                mx >>= \x ->
+                return $ f x
 
 return :: a -> IState s s a
 return a = IState $ \s -> (a, s)
