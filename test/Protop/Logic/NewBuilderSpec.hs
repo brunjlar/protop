@@ -2,35 +2,30 @@ module Protop.Logic.NewBuilderSpec (spec) where
 
 import Prelude hiding (return, (>>=), (>>))
 import Protop.Logic.NewBuilder
-import Protop.Logic.Types
 import Test.Hspec
 
 spec :: Spec
 spec = do
-    varMSpec
+    morMSpec
 
-varMSpec :: Spec
-varMSpec = describe "varM" $ do
+morMSpec :: Spec
+morMSpec = describe "morM" $ do
 
-    it "should find previously defined variables" $ do
-        let s = objM >>= pushM "x" >>
-                objM >>= pushM "y" >>
-                varM "x" >>= \x ->
-                varM "y" >>= \y ->
-                popM >>
-                popM >>
-                return (morS x y)
+    it "should find properly lift objects" $ do
+        let s = objM >>= varM >>= \x ->
+                objM >>= varM >>= \y ->
+                morM x y >>=      \f ->
+                popM >> popM >>
+                return f
         show (evalM s) `shouldBe` "(%1 -> %2)"
 
-    it "should throw an exception when used with the wrong kind" $ do
-        let s = objM >>= pushM "x" >>
-                objM >>= pushM "y" >>
-                varM "x" >>= \x ->
-                pushM "f" (morS x x) >>
-                varM "f" >>= \f ->
-                varM "y" >>= \y ->
+    it "should throw an exception when lifting is unsound" $ do
+
+        let s = objM     >>= varM >>= \x ->
+                objM     >>= varM >>= \y ->
+                morM x y >>= varM >>= \f ->
                 popM >>
-                popM >>
-                popM >>
-                return (morS f y)
+                lftM f            >>= \t ->
+                popM >> popM >>
+                return t
         print (evalM s) `shouldThrow` anyErrorCall
