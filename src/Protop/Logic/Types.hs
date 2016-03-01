@@ -164,30 +164,34 @@ instance HasScope (Entity k) where
     scope (App f _)   = scope f
     scope (Sgm s _ _) = scope s
 
-class Liftable (a :: Kind -> [Kind] -> *) where
+class Liftable (a :: [Kind] -> *) where
 
-    lft_ :: Sig k ks -> a k' ks -> a k' (k ': ks)
+    lft_ :: Sig k ks -> a ks -> a (k ': ks)
 
-instance Liftable Sig where
+instance Liftable Scope where
+
+    lft_ = const . Cons
+
+instance Liftable (Sig k) where
 
     lft_ = insertS pE
 
-instance Liftable Entity where
+instance Liftable (Entity k) where
 
     lft_ = insert pE
 
-lft' :: ( HasScope (a k')
+lft' :: ( HasScope a
         , Liftable a
-        ) => Sig k ks -> a k' ks -> Either String (a k' (k ': ks))
+        ) => Sig k ks -> a ks -> Either String (a (k ': ks))
 lft' s x = let ss = scope s
                sx = scope x
            in if ss == sx
                 then Right $ lft_ s x
                 else Left    "incompatible scopes"
 
-lft :: ( HasScope (a k')
+lft :: ( HasScope a
        , Liftable a
-       ) => Sig k ks -> a k' ks -> a k' (k ': ks)
+       ) => Sig k ks -> a ks -> a (k ': ks)
 lft s x = fromRight $ lft' s x
 
 sig :: Entity k ks -> Sig k ks

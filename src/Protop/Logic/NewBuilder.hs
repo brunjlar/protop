@@ -1,9 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
--- {-# LANGUAGE GADTs #-}
--- {-# LANGUAGE DataKinds #-}
--- {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
--- {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Protop.Logic.NewBuilder
     ( M
@@ -57,7 +57,11 @@ popM :: M (k ': ks) ks ()
 popM = get >>= \sc ->
        case sc of Cons s -> put $ scope s
 
-lftM :: ( Liftable a
+lftM :: forall (a  :: Kind -> [Kind] -> *)
+               (l  :: Kind)
+               (ls :: [Kind])
+               (ks :: [Kind]).
+        ( Liftable (a l)
         , HasScope (a l)
         , Show (a l ls)
         , Typeable ls
@@ -130,7 +134,10 @@ instance forall k ks. LiftableM ks => LiftableM (k ': ks) where
 
 class Lifting (ks :: [Kind]) where
 
-    lftM_ :: ( Liftable a
+    lftM_ :: forall (a :: Kind -> [Kind] -> *)
+                    (l :: Kind)
+                    (ls :: [Kind]).
+             ( Liftable (a l)
              , HasScope (a l)
              , Typeable ls
              ) => Scope ks -> a l ls -> Maybe (a l ks)
