@@ -3,7 +3,7 @@
 module Protop.Logic.TypesSpec (spec) where
 
 import Protop.Core
-import Protop.Logic
+import Protop.Logic.Types
 import Test.Hspec
 
 spec :: Spec
@@ -109,7 +109,7 @@ appSpec = describe "app" $ do
             lp  = app l p
             sx  = objS $ scope lp
             x   = var sx
-            lp' = lft sx lp 
+            lp' = lft sx lp
             lpx = app lp' x
         show lpx       `shouldBe` "((%1 %2) %2)"
         show (sig lpx) `shouldBe` "Ob"
@@ -180,7 +180,7 @@ compileSpec = describe "compile" $ do
             e  = lam $ (p' `app` x) `app` x
             c  = compile e $ ConsM prodObject EmptyM
         c (Object N) `shouldBe` (Object $ N :* N)
-        
+
 prodSig :: Sig ('LAM 'OBJ ('LAM 'OBJ 'OBJ)) '[]
 prodSig = let sx = objS Empty
               x  = var sx

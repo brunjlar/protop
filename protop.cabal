@@ -34,11 +34,8 @@ library
                      , Protop.Core.Transitivities
                      , Protop.Logic
                      , Protop.Logic.Builder
-                     , Protop.Logic.NewBuilder
                      , Protop.Logic.Simple
                      , Protop.Logic.Types
-                     , Protop.IndexedState
-                     , Protop.TVault
                      , Protop.Utility
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
@@ -56,11 +53,8 @@ test-suite protop-test
                      , protop
   other-modules:       Protop.Core.NaturalSpec
                      , Protop.Core.OmegaSpec
-                     , Protop.IndexedStateSpec
                      , Protop.Logic.BuilderSpec
-                     , Protop.Logic.NewBuilderSpec
                      , Protop.Logic.TypesSpec
-                     , Protop.TVaultSpec
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
 

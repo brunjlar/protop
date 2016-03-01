@@ -2,113 +2,87 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Protop.Logic.Builder
-    ( BuilderT
-    , runBuilderT
-    , Builder
-    , runBuilder
-    , objB
-    , lamSB
-    , addVarB
-    , getVarB
-    , lftB
+    ( M
+    , evalM'
+    , evalM
+    , popM
+    , lftM
+    , objM
+    , morM
+    , prfM
+    , lamSM
+    , sgmSM
+    , varM
+    , lamM
+    , appM
+    , sgmM
     ) where
 
-import           Control.Monad.Identity (Identity(..))
+import qualified Control.Monad.Identity as I
 import qualified Control.Monad.State    as S
-import           Data.List              (find)
 import           Protop.Logic.Simple
 
-data St = St
-    { scopes :: [SCOPE]
-    , sigs   :: [Maybe SIG]
-    , vars   :: [(String, ENTITY)]
-    }
+newtype M m a = M { runM :: S.StateT Scope m a } deriving (Functor, Applicative, Monad, S.MonadState Scope)
 
-initialSt :: St
-initialSt = St
-    { scopes = [emptySC]
-    , sigs   = [Nothing]
-    , vars   = []
-    }
+evalM' :: Monad m => M m a -> m a
+evalM' m = do
+    (x, sc) <- S.runStateT (runM m) empty
+    if sc == empty
+       then return x
+       else error "scope not empty"
 
-newtype BuilderT m a = BuilderT (S.StateT St m a)
-    deriving (Functor, Applicative, Monad, S.MonadState St, S.MonadTrans)
+evalM :: M I.Identity a -> a
+evalM = I.runIdentity . evalM'
 
-runBuilderT :: Monad m => BuilderT m a -> m a
-runBuilderT (BuilderT mx) = S.evalStateT mx initialSt
+varM :: Monad m => Sig -> M m Entity
+varM s = do
+    sc <- S.get
+    S.when (sc /= scope s) $ fail $ show s ++ " has scope " ++ show (scope s) ++
+                                    ", expecting scope " ++ show sc
+    S.put $ cons s
+    return $ var s
 
-type Builder = BuilderT Identity
+popM :: Monad m => M m ()
+popM = do
+    sc <- S.get
+    case headTail sc of
+      Nothing       -> fail "can't pop empty scope"
+      Just (_, sc') -> S.put sc'
 
-runBuilder :: Builder a -> a
-runBuilder = runIdentity . runBuilderT
+lftM :: (Monad m, Liftable a, HasScope a, Show a) => a -> M m a
+lftM x = do
+    sc <- S.get
+    return $ lft' sc x
 
-pop :: Monad m => BuilderT m ()
-pop = do
-    st <- S.get
-    if scopes st == [emptySC]
-        then fail "can't pop emty scope"
-        else S.put St
-            { scopes = tail $ scopes st
-            , sigs   = tail $ sigs st
-            , vars   = tail $ vars st
-            }
+objM :: Monad m => M m Sig
+objM = objS <$> S.get
 
-objB :: Monad m => BuilderT m SIG
-objB = do
-    st <- S.get
-    return $ objSIG $ head $ scopes st
+morM :: Monad m => Entity -> Entity -> M m Sig
+morM x y = morS <$> lftM x <*> lftM y
 
-lamSB :: Monad m => SIG -> BuilderT m SIG
-lamSB s = do
-    sc <- S.gets scopes
-    if sc == [emptySC]
-        then fail "can't create lambda signature in empty scope"
-        else do
-            let scS = scopeSIG s
-            if scS /= head sc
-                then fail $ "signature " ++ show s ++ " has scope " ++
-                            show scS ++ ", but was expecting scope " ++
-                            show (head sc)
-                else do
-                    pop
-                    return $ lamSIG s
+prfM :: Monad m => Entity -> Entity -> M m Sig
+prfM f g = prfS <$> lftM f <*> lftM g
 
-addVarB :: Monad m => String -> SIG -> BuilderT m ENTITY
-addVarB v s = do
-    st <- S.get
-    let scS = scopeSIG s
-        sc  = head $ scopes st
-    if scopeSIG s /= sc
-        then fail $ "signature " ++ show s ++ " has scope " ++
-                    show scS ++ ", but was expecting scope " ++
-                    show sc
-        else do
-            let e = varE s
-            S.put St
-                { scopes = scopeE e : scopes st
-                , sigs   = Just s   : sigs   st
-                , vars   = (v, e)   : vars   st
-                }
-            return e
+lamSM :: Monad m => Sig -> M m Sig
+lamSM s = do
+    s' <- lftM s
+    popM
+    return $ lamS s'
 
-getVarB :: Monad m => String -> BuilderT m ENTITY
-getVarB v = do
-    vs <- S.gets vars
-    case find (\(v', _) -> v' == v) vs of
-        Just (_, e) -> lftB e
-        Nothing     -> fail $ "no variable with name '" ++ v ++ "' in scope"
+sgmSM :: Monad m => Sig -> M m Sig
+sgmSM s = do
+    s' <- lftM s
+    popM
+    return $ sgmS s'
 
-lftB :: Monad m => ENTITY -> BuilderT m ENTITY
-lftB e = do
-    st <- S.get
-    return $ f $ zip (sigs st) (scopes st) where
+lamM :: Monad m => Entity -> M m Entity
+lamM e = do
+    e' <- lftM e
+    popM
+    return $ lam e'
 
-    f :: [(Maybe SIG, SCOPE)] -> ENTITY
-    f [(_, _)]
-        | scopeE e == emptySC = e
-        | otherwise           = error $ "can't lift entity " ++ show e ++ " with scope "
-                                         ++ show (scopeE e) ++ " into scope"
-    f ((Just s, sc) : ss)
-        | scopeE e == sc      = e
-        | otherwise           = lftE s $ f ss
-    f _                       = error "impossible branch"
+appM :: Monad m => Entity -> Entity -> M m Entity
+appM e f = app <$> lftM e <*> lftM f
+
+sgmM :: Monad m => Sig -> Entity -> Entity -> M m Entity
+sgmM s e f = sgm <$> lftM s <*> lftM e <*> lftM f
