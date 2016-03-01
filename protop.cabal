@@ -3,7 +3,7 @@ version:             0.1.0.0
 synopsis:            topos programming
 description:         Please see README.md
 homepage:            https://github.com/brunjlar/protop
-license:             BSD3
+license:             MIT
 license-file:        LICENSE
 author:              Lars Bruenjes
 maintainer:          brunjlar@gmail.com
