@@ -19,9 +19,11 @@ module Protop.Logic.Simple
     , morSIG
     , prfSIG
     , lamSIG
+    , sgmSIG
     , varE
     , lamE
     , appE
+    , sgmE
     , scopeSIG
     , scopeE
     ) where
@@ -35,17 +37,29 @@ class Typeable ks => Simple (ks :: [Kind]) where
 
     lam_  :: Simple' k => Entity k ks -> ENTITY
 
+    sgmS_ :: Simple' k => Sig    k ks -> SIG
+
+    sgm_  :: (Simple' k, Simple' k') => Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> ENTITY
+
 instance Simple '[] where
 
     lamS_ s = error $ "can't generalize signature with empty scope: " ++ show s
 
     lam_ e  = error $ "can't generalize entity with empty scope: "    ++ show e
 
+    sgmS_ s = error $ "can't make sigma signature with empty scope: " ++ show s
+
+    sgm_ s e f = ENTITY $ sgm s e f
+
 instance (Simple ks, Simple' k') => Simple (k' ': ks) where
 
-    lamS_ = SIG    . lamS
+    lamS_      = SIG    . lamS
 
-    lam_  = ENTITY . lam
+    lam_       = ENTITY . lam
+
+    sgmS_      = SIG    . sgmS
+
+    sgm_ s e f = ENTITY $ sgm s e f
 
 class Typeable k => Simple' (k :: Kind) where
 
@@ -72,6 +86,10 @@ instance (Simple' k, Simple' k') => Simple' ('LAM k k') where
                 error $ "can't apply " ++
                         show' e ++ " (" ++ show (scope e) ++ ") to " ++
                         show' f ++ " (" ++ show (scope f) ++ ")"
+
+instance (Simple' k, Simple' k') => Simple' ('SGM k k') where
+
+    app_ e _ = error $ "can't apply sigma entity " ++ show' e
 
 data SCOPE where
 
@@ -172,6 +190,9 @@ prfSIG (ENTITY (f :: Entity k ks))
 lamSIG :: SIG -> SIG
 lamSIG (SIG s) = lamS_ s
 
+sgmSIG :: SIG -> SIG
+sgmSIG (SIG s) = sgmS_ s
+
 varE :: SIG -> ENTITY
 varE (SIG s) = ENTITY $ var s
 
@@ -180,6 +201,17 @@ lamE (ENTITY e) = lam_ e
 
 appE :: ENTITY -> ENTITY -> ENTITY
 appE (ENTITY e) = app_ e
+
+sgmE :: SIG -> ENTITY -> ENTITY -> ENTITY
+sgmE (SIG    (s :: Sig    k ks))
+     (ENTITY (e :: Entity l ls))
+     (ENTITY (f :: Entity m ms)) =
+    case (eqT :: Maybe (k :~: 'SGM l m), eqT :: Maybe (ks :~: ls), eqT :: Maybe (ls :~: ms)) of
+        (Just Refl, Just Refl, Just Refl) -> sgm_ s e f
+        (_        , _        , _        ) -> error $ "can't make a sigma entity from entities " ++
+                                                     show e ++ " (" ++ show (scope e) ++ ") and " ++
+                                                     show f ++ " (" ++ show (scope f) ++ ") for signature " ++
+                                                     show s ++ " (" ++ show (scope s) ++ ")"
 
 scopeSIG :: SIG -> SCOPE
 scopeSIG (SIG s) = SCOPE $ scope s
