@@ -23,7 +23,9 @@ morMSpec = describe "morM" $ do
                 morM x y >>=      \f ->
                 popM >> popM >>
                 return f
-        show (evalM s) `shouldBe` "(%1 -> %2)"
+            e = evalM s
+        show e `shouldBe` "(%1 -> %2)"
+        kind e `shouldBe` MOR
 
     it "should throw an exception when lifting is unsound" $ do
 
@@ -47,7 +49,9 @@ prfMSpec = describe "prfM" $
                 (prfM f  >=>          \p ->
                 popM >> popM >> popM >> popM >>
                 return p)
-        show (evalM s) `shouldBe` "(%3 == %4)"
+            e = evalM s
+        show e `shouldBe` "(%3 == %4)"
+        kind e `shouldBe` PRF
 
 lamSMSpec :: Spec
 lamSMSpec = describe "lamSM" $
@@ -55,7 +59,9 @@ lamSMSpec = describe "lamSM" $
     it "should create a simple lambda signature" $ do
         let s = objM     >>= varM  >>= \x ->
                 morM x x >>= lamSM
-        show (evalM s) `shouldBe` "(\\(%1 :: Ob) -> (%1 -> %1))"
+            e = evalM s
+        show e `shouldBe` "(\\(%1 :: Ob) -> (%1 -> %1))"
+        kind e `shouldBe` (LAM OBJ MOR)
 
 sgmSMSpec :: Spec
 sgmSMSpec = describe "sgmSM" $
@@ -64,14 +70,18 @@ sgmSMSpec = describe "sgmSM" $
         let s = objM     >>= varM >>= \t ->
                 objM     >>= varM >>= \x ->
                 morM x t >>= lamSM >>= sgmSM
-        show (evalM s) `shouldBe` "(Ex (%1 :: Ob) (\\(%2 :: Ob) -> (%2 -> %1)))"
+            e = evalM s
+        show e `shouldBe` "(Ex (%1 :: Ob) (\\(%2 :: Ob) -> (%2 -> %1)))"
+        kind e `shouldBe` (SGM OBJ (LAM OBJ MOR))
 
 lamMSpec :: Spec
 lamMSpec = describe "lamM" $
 
     it "should create a simple lambda entity" $ do
         let s = objM >>= varM >>= lamM
-        show (evalM s) `shouldBe` "(\\(%1 :: Ob) -> %1)"
+            e = evalM s
+        show e `shouldBe` "(\\(%1 :: Ob) -> %1)"
+        kind e `shouldBe` (LAM OBJ OBJ)
 
 appMSpec :: Spec
 appMSpec = describe "appM" $
@@ -85,7 +95,9 @@ appMSpec = describe "appM" $
                 appM px x >>= \pxx ->
                 popM >> popM >>
                 return pxx
-        show (evalM s) `shouldBe` "((%1 %2) %2)"
+            e = evalM s
+        show e `shouldBe` "((%1 %2) %2)"
+        kind e `shouldBe` OBJ
 
 sgmMSpec :: Spec
 sgmMSpec = describe "sgmM" $
@@ -98,5 +110,7 @@ sgmMSpec = describe "sgmM" $
                 sgmM t x f         >>= \g ->
                 popM >> popM >>
                 return g
-        show' (evalM s) `shouldBe` "<%1, %2> :: (Ex (%3 :: Ob) (%3 -> %1))"
+            e = evalM s
+        show' e `shouldBe` "<%1, %2> :: (Ex (%3 :: Ob) (%3 -> %1))"
+        kind e `shouldBe` (SGM OBJ MOR)
 

@@ -25,10 +25,13 @@ module Protop.Logic.Simple
     , lam
     , app
     , sgm
+    , Kind(..)
+    , HasKind(..)
     ) where
 
 import           Data.Typeable        (Typeable, eqT, (:~:)(..))
 import qualified Protop.Logic.Indexed as I
+import           Protop.Logic.Indexed (Kind(..), HasKind(..))
 
 data Scope where
 
@@ -179,6 +182,14 @@ sgm s@(Sig    (s' :: I.Sig    k ks))
           (Just Refl, Just Refl, Just Refl) -> sgm_ s' e' f'
           (_        , _        , _        ) -> error $ "can't make a sigma entity from entities " ++
                                                        showSC e ++ " and " ++ showSC f ++ " for " ++ showSC s
+
+instance HasKind Sig where
+
+    kind (Sig s) = kind s
+
+instance HasKind Entity where
+
+    kind e = kind $ sig e
 
 class Typeable ks => Simple (ks :: [I.Kind]) where
 

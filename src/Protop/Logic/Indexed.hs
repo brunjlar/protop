@@ -38,6 +38,7 @@ module Protop.Logic.Indexed
     , Model
     , compile
     , SCLiftable(..)
+    , HasKind(..)
     ) where
 
 import Data.List       (intercalate)
@@ -323,6 +324,47 @@ compile (Lam e)     sc           = \e' -> compile e (ConsM e' sc)
 compile (Sgm _ e f) sc           = (compile e sc, compile f sc)
 compile _         _              = error "impossible branch"
 
+class SCLiftable (a :: [Kind] -> *) where
+
+    scLft :: Scope ks -> a ls -> a (ls :++ ks)
+
+instance SCLiftable Scope where
+
+    scLft sc Empty    = sc
+    scLft sc (Cons s) = Cons (scLft sc s)
+
+instance SCLiftable (Sig k) where
+
+    scLft sc (ObjS sc') = objS $ scLft sc sc'
+    scLft sc (MorS x y) = morS (scLft sc x) (scLft sc y)
+    scLft sc (PrfS f g) = prfS (scLft sc f) (scLft sc g)
+    scLft sc (LamS s)   = lamS (scLft sc s)
+    scLft sc (SgmS s)   = sgmS (scLft sc s)
+
+instance SCLiftable (Entity k) where
+
+    scLft sc (Var s)     = var (scLft sc s)
+    scLft sc (Lft s e)   = lft (scLft sc s) (scLft sc e)
+    scLft sc (Lam e)     = lam (scLft sc e)
+    scLft sc (App f g)   = app (scLft sc f) (scLft sc g)
+    scLft sc (Sgm s e f) = sgm (scLft sc s) (scLft sc e) (scLft sc f)
+
+class HasKind a where
+
+    kind :: a -> Kind
+
+instance HasKind (Sig k ks) where
+
+    kind (ObjS _)   = OBJ
+    kind (MorS _ _) = MOR
+    kind (PrfS _ _) = PRF
+    kind (LamS s)   = LAM (kind $ headSC $ scope s) (kind s) 
+    kind (SgmS s)   = SGM (kind $ headSC $ scope s) (kind s)
+
+instance HasKind (Entity k ks) where
+
+    kind e = kind $ sig e
+
 class Insertable (ls :: [Kind]) where
 
     insertSC :: Proxy ls ->
@@ -423,31 +465,6 @@ instance Substitutable ls => Substitutable (l ': ls) where
                           = lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
     subst p e (App f g)   = app (subst p e f) (subst p e g)
     subst p e (Sgm s f g) = sgm (substS p e s) (subst p e f) (subst p e g)
-
-class SCLiftable (a :: [Kind] -> *) where
-
-    scLft :: Scope ks -> a ls -> a (ls :++ ks)
-
-instance SCLiftable Scope where
-
-    scLft sc Empty    = sc
-    scLft sc (Cons s) = Cons (scLft sc s)
-
-instance SCLiftable (Sig k) where
-
-    scLft sc (ObjS sc') = objS $ scLft sc sc'
-    scLft sc (MorS x y) = morS (scLft sc x) (scLft sc y)
-    scLft sc (PrfS f g) = prfS (scLft sc f) (scLft sc g)
-    scLft sc (LamS s)   = lamS (scLft sc s)
-    scLft sc (SgmS s)   = sgmS (scLft sc s)
-
-instance SCLiftable (Entity k) where
-
-    scLft sc (Var s)     = var (scLft sc s)
-    scLft sc (Lft s e)   = lft (scLft sc s) (scLft sc e)
-    scLft sc (Lam e)     = lam (scLft sc e)
-    scLft sc (App f g)   = app (scLft sc f) (scLft sc g)
-    scLft sc (Sgm s e f) = sgm (scLft sc s) (scLft sc e) (scLft sc f)
 
 pE :: Proxy ('[] :: [Kind])
 pE = Proxy
