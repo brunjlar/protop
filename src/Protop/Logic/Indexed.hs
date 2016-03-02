@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Protop.Logic.Types
+module Protop.Logic.Indexed
     ( Kind(..)
     , Scope(..)
     , headSC

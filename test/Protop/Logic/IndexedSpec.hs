@@ -1,9 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 
-module Protop.Logic.TypesSpec (spec) where
+module Protop.Logic.IndexedSpec (spec) where
 
 import Protop.Core
-import Protop.Logic.Types
+import Protop.Logic.Indexed
 import Test.Hspec
 
 spec :: Spec

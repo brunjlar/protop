@@ -27,39 +27,39 @@ module Protop.Logic.Simple
     , sgm
     ) where
 
-import           Data.Typeable      (Typeable, eqT, (:~:)(..))
-import qualified Protop.Logic.Types as T
+import           Data.Typeable        (Typeable, eqT, (:~:)(..))
+import qualified Protop.Logic.Indexed as I
 
 data Scope where
 
-    Scope :: Simple ks => T.Scope ks -> Scope
+    Scope :: Simple ks => I.Scope ks -> Scope
 
 data Sig where
 
-    Sig :: (Simple ks , Simple' k) => T.Sig k ks -> Sig
+    Sig :: (Simple ks , Simple' k) => I.Sig k ks -> Sig
 
 data Entity where
 
-    Entity :: (Simple ks, Simple' k) => T.Entity k ks -> Entity
+    Entity :: (Simple ks, Simple' k) => I.Entity k ks -> Entity
 
 instance Eq Scope where
 
-    Scope (sc :: T.Scope ks) == Scope (sc' :: T.Scope ks')
+    Scope (sc :: I.Scope ks) == Scope (sc' :: I.Scope ks')
         = case eqT :: Maybe (ks :~: ks') of
             Just Refl -> sc == sc'
             Nothing   -> False
 
 instance Eq Sig where
 
-    Sig (s :: T.Sig k ks) == Sig (t :: T.Sig l ls)
-        = case eqT :: Maybe (T.Sig k ks :~: T.Sig l ls) of
+    Sig (s :: I.Sig k ks) == Sig (t :: I.Sig l ls)
+        = case eqT :: Maybe (I.Sig k ks :~: I.Sig l ls) of
             Just Refl -> s == t
             Nothing   -> False
 
 instance Eq Entity where
 
-    Entity (e :: T.Entity k ks) == Entity (f :: T.Entity l ls)
-        = case eqT :: Maybe (T.Entity k ks :~: T.Entity l ls) of
+    Entity (e :: I.Entity k ks) == Entity (f :: I.Entity l ls)
+        = case eqT :: Maybe (I.Entity k ks :~: I.Entity l ls) of
             Just Refl -> e == f
             Nothing   -> False
 
@@ -77,14 +77,14 @@ instance Show Entity where
 
 headTail :: Scope -> Maybe (Sig, Scope)
 headTail (Scope sc) = case sc of
-                            T.Empty  -> Nothing
-                            T.Cons _ -> Just $ headTail_ sc
+                            I.Empty  -> Nothing
+                            I.Cons _ -> Just $ headTail_ sc
 
 sig :: Entity -> Sig
-sig (Entity e) = Sig $ T.sig e
+sig (Entity e) = Sig $ I.sig e
 
 show' :: Entity -> String
-show' (Entity e) = T.show' e
+show' (Entity e) = I.show' e
 
 class Liftable a where
 
@@ -92,18 +92,18 @@ class Liftable a where
 
 instance Liftable Sig where
 
-    lft s@(Sig (s' :: T.Sig k ks))
-        t@(Sig (t' :: T.Sig l ls)) =
+    lft s@(Sig (s' :: I.Sig k ks))
+        t@(Sig (t' :: I.Sig l ls)) =
             case (eqT :: Maybe (ks :~: ls)) of
-              Just Refl -> Sig $ T.lft s' t'
+              Just Refl -> Sig $ I.lft s' t'
               Nothing   -> error $ "can't lift " ++ showSC t ++ " by " ++ showSC s
 
 instance Liftable Entity where
 
-    lft s@(Sig    (s' :: T.Sig    k ks))
-        e@(Entity (e' :: T.Entity l ls)) =
+    lft s@(Sig    (s' :: I.Sig    k ks))
+        e@(Entity (e' :: I.Entity l ls)) =
             case (eqT :: Maybe (ks :~: ls)) of
-              Just Refl -> Entity $ T.lft s' e'
+              Just Refl -> Entity $ I.lft s' e'
               Nothing   -> error  $ "can't lift " ++ showSC e ++ " by " ++ showSC s
 
 class HasScope a where
@@ -116,11 +116,11 @@ instance HasScope Scope where
 
 instance HasScope Sig where
 
-    scope (Sig s) = Scope $ T.scope s
+    scope (Sig s) = Scope $ I.scope s
 
 instance HasScope Entity where
 
-    scope (Entity e) = Scope $ T.scope e
+    scope (Entity e) = Scope $ I.scope e
 
 lft' :: (Liftable a, HasScope a, Show a) => Scope -> a -> a
 lft' sc x
@@ -131,27 +131,27 @@ lft' sc x
           Just (s', sc') -> lft s' $ lft' sc' x
 
 empty :: Scope
-empty = Scope T.Empty
+empty = Scope I.Empty
 
 cons :: Sig -> Scope
-cons (Sig s) = Scope $ T.Cons s
+cons (Sig s) = Scope $ I.Cons s
 
 objS :: Scope -> Sig
-objS (Scope sc) = Sig $ T.objS sc
+objS (Scope sc) = Sig $ I.objS sc
 
 morS :: Entity -> Entity -> Sig
-morS x@(Entity (x' :: T.Entity k ks))
-     y@(Entity (y' :: T.Entity l ls)) =
-         case (eqT :: Maybe (k :~: 'T.OBJ), eqT :: Maybe (T.Entity k ks :~: T.Entity l ls)) of
-           (Just Refl, Just Refl) -> Sig $ T.morS x' y'
+morS x@(Entity (x' :: I.Entity k ks))
+     y@(Entity (y' :: I.Entity l ls)) =
+         case (eqT :: Maybe (k :~: 'I.OBJ), eqT :: Maybe (I.Entity k ks :~: I.Entity l ls)) of
+           (Just Refl, Just Refl) -> Sig $ I.morS x' y'
            (_        , _        ) -> error $ "can't make a morphism signature from entities " ++
                                              showSC x ++ " and " ++ showSC y
 
 prfS :: Entity -> Entity -> Sig
-prfS f@(Entity (f' :: T.Entity k ks))
-     g@(Entity (g' :: T.Entity l ls)) =
-         case (eqT :: Maybe (k :~: 'T.MOR), eqT :: Maybe (T.Entity k ks :~: T.Entity l ls)) of
-           (Just Refl, Just Refl) -> Sig $ T.prfS f' g'
+prfS f@(Entity (f' :: I.Entity k ks))
+     g@(Entity (g' :: I.Entity l ls)) =
+         case (eqT :: Maybe (k :~: 'I.MOR), eqT :: Maybe (I.Entity k ks :~: I.Entity l ls)) of
+           (Just Refl, Just Refl) -> Sig $ I.prfS f' g'
            (_        , _        ) -> error $ "can't make a proof signature from entities " ++
                                              showSC f ++ " and " ++ showSC g
 
@@ -163,7 +163,7 @@ sgmS :: Sig -> Sig
 sgmS (Sig s) = sgmS_ s
 
 var :: Sig -> Entity
-var (Sig s) = Entity $ T.var s
+var (Sig s) = Entity $ I.var s
 
 lam :: Entity -> Entity
 lam (Entity e) = lam_ e
@@ -172,25 +172,25 @@ app :: Entity -> Entity -> Entity
 app (Entity e) = app_ e
 
 sgm :: Sig -> Entity -> Entity -> Entity
-sgm s@(Sig    (s' :: T.Sig    k ks))
-    e@(Entity (e' :: T.Entity l ls))
-    f@(Entity (f' :: T.Entity m ms)) =
-        case (eqT :: Maybe (k :~: 'T.SGM l m), eqT :: Maybe (ks :~: ls), eqT :: Maybe (ls :~: ms)) of
+sgm s@(Sig    (s' :: I.Sig    k ks))
+    e@(Entity (e' :: I.Entity l ls))
+    f@(Entity (f' :: I.Entity m ms)) =
+        case (eqT :: Maybe (k :~: 'I.SGM l m), eqT :: Maybe (ks :~: ls), eqT :: Maybe (ls :~: ms)) of
           (Just Refl, Just Refl, Just Refl) -> sgm_ s' e' f'
           (_        , _        , _        ) -> error $ "can't make a sigma entity from entities " ++
                                                        showSC e ++ " and " ++ showSC f ++ " for " ++ showSC s
 
-class Typeable ks => Simple (ks :: [T.Kind]) where
+class Typeable ks => Simple (ks :: [I.Kind]) where
 
-    lamS_     :: Simple' k => T.Sig    k ks -> Sig
+    lamS_     :: Simple' k => I.Sig    k ks -> Sig
 
-    lam_      :: Simple' k => T.Entity k ks -> Entity
+    lam_      :: Simple' k => I.Entity k ks -> Entity
 
-    sgmS_     :: Simple' k => T.Sig    k ks -> Sig
+    sgmS_     :: Simple' k => I.Sig    k ks -> Sig
 
-    sgm_      :: (Simple' k, Simple' k') => T.Sig ('T.SGM k k') ks -> T.Entity k ks -> T.Entity k' ks -> Entity
+    sgm_      :: (Simple' k, Simple' k') => I.Sig ('I.SGM k k') ks -> I.Entity k ks -> I.Entity k' ks -> Entity
 
-    headTail_ :: T.Scope ks -> (Sig, Scope)
+    headTail_ :: I.Scope ks -> (Sig, Scope)
 
 instance Simple '[] where
 
@@ -200,51 +200,51 @@ instance Simple '[] where
 
     sgmS_ s = error $ "can't make sigma signature with empty scope: " ++ show s
 
-    sgm_ s e f = Entity $ T.sgm s e f
+    sgm_ s e f = Entity $ I.sgm s e f
 
     headTail_ _ = error "can't get head and tail of empty scope"
 
 instance (Simple ks, Simple' k') => Simple (k' ': ks) where
 
-    lamS_        = Sig    . T.lamS
+    lamS_        = Sig    . I.lamS
 
-    lam_         = Entity . T.lam
+    lam_         = Entity . I.lam
 
-    sgmS_        = Sig    . T.sgmS
+    sgmS_        = Sig    . I.sgmS
 
-    sgm_ s e f   = Entity $ T.sgm s e f
+    sgm_ s e f   = Entity $ I.sgm s e f
 
-    headTail_ sc = (Sig $ T.headSC sc, Scope $ T.tailSC sc)
+    headTail_ sc = (Sig $ I.headSC sc, Scope $ I.tailSC sc)
 
-class Typeable k => Simple' (k :: T.Kind) where
+class Typeable k => Simple' (k :: I.Kind) where
 
-    app_ :: Typeable ks => T.Entity k ks -> Entity -> Entity
+    app_ :: Typeable ks => I.Entity k ks -> Entity -> Entity
 
-instance Simple' 'T.OBJ where
+instance Simple' 'I.OBJ where
 
-    app_ x _ = error $ "can't apply object " ++ T.show' x
+    app_ x _ = error $ "can't apply object " ++ I.show' x
 
-instance Simple' 'T.MOR where
+instance Simple' 'I.MOR where
 
-    app_ f _ = error $ "can't apply morphism " ++ T.show' f
+    app_ f _ = error $ "can't apply morphism " ++ I.show' f
 
-instance Simple' 'T.PRF where
+instance Simple' 'I.PRF where
 
-    app_ p _ = error $ "can't apply proof " ++ T.show' p
+    app_ p _ = error $ "can't apply proof " ++ I.show' p
 
-instance (Simple' k, Simple' k') => Simple' ('T.LAM k k') where
+instance (Simple' k, Simple' k') => Simple' ('I.LAM k k') where
 
-    app_ (e :: T.Entity ('T.LAM k k') ks) (Entity (f :: T.Entity l ls))
+    app_ (e :: I.Entity ('I.LAM k k') ks) (Entity (f :: I.Entity l ls))
         = case (eqT :: Maybe (ks :~: ls), eqT :: Maybe (k :~: l)) of
-            (Just Refl, Just Refl) -> Entity $ T.app e f
+            (Just Refl, Just Refl) -> Entity $ I.app e f
             (_        , _        ) ->
                 error $ "can't apply " ++
-                        T.show' e ++ " (" ++ show (T.scope e) ++ ") to " ++
-                        T.show' f ++ " (" ++ show (T.scope f) ++ ")"
+                        I.show' e ++ " (" ++ show (I.scope e) ++ ") to " ++
+                        I.show' f ++ " (" ++ show (I.scope f) ++ ")"
 
-instance (Simple' k, Simple' k') => Simple' ('T.SGM k k') where
+instance (Simple' k, Simple' k') => Simple' ('I.SGM k k') where
 
-    app_ e _ = error $ "can't apply sigma entity " ++ T.show' e
+    app_ e _ = error $ "can't apply sigma entity " ++ I.show' e
 
 showSC :: (Show a, HasScope a) => a -> String
 showSC x = show x ++ " (" ++ show (scope x) ++ ")"
