@@ -36,12 +36,14 @@ library
                      , Protop.Logic.Builder
                      , Protop.Logic.Indexed
                      , Protop.Logic.Simple
+                     , Protop.Logic.Sokrates
                      , Protop.Utility
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , hspec
                      , mtl
+                     , transformers
   default-language:    Haskell2010
 
 test-suite protop-test
