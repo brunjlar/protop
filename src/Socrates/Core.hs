@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Protop.Logic.Socrates.Types
+module Socrates.Core
     ( MonadSocrates(..)
     , oracle
     ) where

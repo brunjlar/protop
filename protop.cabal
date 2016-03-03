@@ -36,17 +36,17 @@ library
                      , Protop.Logic.Builder
                      , Protop.Logic.Indexed
                      , Protop.Logic.Simple
-                     , Protop.Logic.Socrates
-                     , Protop.Logic.Socrates.Dialog
-                     , Protop.Logic.Socrates.IO
-                     , Protop.Logic.Socrates.Script
-                     , Protop.Logic.Socrates.Types
+                     , Socrates
+                     , Socrates.IO
+                     , Socrates.Script
+                     , Socrates.Core
                      , Protop.Utility
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , hspec
                      , mtl
+                     , operational
                      , transformers
   default-language:    Haskell2010
 

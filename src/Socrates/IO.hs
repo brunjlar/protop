@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Protop.Logic.Socrates.IO
+module Socrates.IO
     ( SocratesIO
     , runSocratesIO
     ) where
@@ -10,7 +10,7 @@ import           Control.Monad               (forM_)
 import qualified Control.Monad.IO.Class      as I
 import qualified Control.Monad.State         as S
 import           Numeric.Natural
-import           Protop.Logic.Socrates.Types
+import           Socrates.Core
 import           Text.Read                   (readMaybe)
 
 newtype SocratesIO a = SocratesIO (S.StateT Natural IO a)

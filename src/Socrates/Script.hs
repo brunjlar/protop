@@ -1,13 +1,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Protop.Logic.Socrates.Script
+module Socrates.Script
     ( SocratesScript
     , runSocratesScript
     ) where
 
 import qualified Control.Monad.State         as S
-import           Protop.Logic.Socrates.Types
+import           Socrates.Core
 
 newtype SocratesScript a = SocratesScript (S.State [String] a)
     deriving (Functor, Applicative, Monad, S.MonadState [String])
