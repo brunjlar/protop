@@ -2,8 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Socrates.Script
-    ( SocratesScript
-    , runSocratesScript
+    ( runSocratesScript
     ) where
 
 import qualified Control.Monad.State as S
@@ -13,8 +12,8 @@ import           Socrates.Core
 newtype SocratesScript a = SocratesScript (S.State [Natural] a)
     deriving (Functor, Applicative, Monad, S.MonadState [Natural])
 
-runSocratesScript :: SocratesScript a -> [Natural] -> a
-runSocratesScript (SocratesScript s) = S.evalState s
+runSocratesScript :: Socrates a -> [Natural] -> Maybe a
+runSocratesScript s = let (SocratesScript m) = runSocrates s in S.evalState m
 
 instance MonadSocrates SocratesScript where
 

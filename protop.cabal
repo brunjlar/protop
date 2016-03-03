@@ -36,6 +36,7 @@ library
                      , Protop.Logic.Builder
                      , Protop.Logic.Indexed
                      , Protop.Logic.Simple
+                     , Protop.Logic.Socrates
                      , Socrates
                      , Socrates.IO
                      , Socrates.Script

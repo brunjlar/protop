@@ -2,8 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Socrates.IO
-    ( SocratesIO
-    , runSocratesIO
+    ( runSocratesIO
     ) where
 
 import           Control.Monad               (forM_)
@@ -16,8 +15,8 @@ import           Text.Read                   (readMaybe)
 newtype SocratesIO a = SocratesIO (S.StateT Natural IO a)
     deriving (Functor, Applicative, Monad, I.MonadIO, S.MonadState Natural)
 
-runSocratesIO :: SocratesIO a -> IO a
-runSocratesIO (SocratesIO m) = S.evalStateT m 0
+runSocratesIO :: Socrates a -> IO (Maybe a)
+runSocratesIO s = let (SocratesIO m) = runSocrates s in S.evalStateT m 0
 
 instance MonadSocrates SocratesIO where
 

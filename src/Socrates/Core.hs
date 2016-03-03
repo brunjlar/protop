@@ -62,11 +62,11 @@ runSocrates (Socrates p) = eval $ view p where
             case mi of
               Nothing -> return Nothing
               Just i  -> do
-                  let q = snd (xs !! (fromIntegral i))
+                  let q = snd (xs !! fromIntegral i)
                   mx <- runSocrates q
                   case mx of
                     Nothing -> loop
-                    Just _  -> return $ mx
+                    Just _  -> return mx
 
 scoped :: String -> (a -> String) -> Socrates a -> Socrates a
 scoped s f q = Socrates $ singleton $ Scoped s f q
