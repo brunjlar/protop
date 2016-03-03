@@ -6,21 +6,22 @@ module Socrates.Script
     , runSocratesScript
     ) where
 
-import qualified Control.Monad.State         as S
+import qualified Control.Monad.State as S
+import           Numeric.Natural
 import           Socrates.Core
 
-newtype SocratesScript a = SocratesScript (S.State [String] a)
-    deriving (Functor, Applicative, Monad, S.MonadState [String])
+newtype SocratesScript a = SocratesScript (S.State [Natural] a)
+    deriving (Functor, Applicative, Monad, S.MonadState [Natural])
 
-runSocratesScript :: SocratesScript a -> [String] -> a
+runSocratesScript :: SocratesScript a -> [Natural] -> a
 runSocratesScript (SocratesScript s) = S.evalState s
 
 instance MonadSocrates SocratesScript where
 
-    oracle' _ = do
+    oracle _ = do
         (x : xs) <- S.get
         S.put xs
-        return $ Just $ read x
+        return $ Just $ x - 1
 
     question  = const $ return ()
 
