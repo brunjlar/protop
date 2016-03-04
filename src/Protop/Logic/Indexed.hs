@@ -31,8 +31,8 @@ module Protop.Logic.Indexed
     , app
     , sgm'
     , sgm
-    , first
-    , second
+    , pr1
+    , pr2
     , show'
     , ScopeM(..)
     , Model
@@ -84,6 +84,10 @@ data Entity :: Kind -> [Kind] -> * where
 
     Sgm :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Entity ('SGM k k') ks
 
+    Pr1 :: Entity ('SGM k k') ks -> Entity k ks
+
+    Pr2 :: Entity ('SGM k k') ks -> Entity k' ks
+
 instance Eq (Scope ks) where
 
     Empty  == Empty   = True
@@ -106,6 +110,8 @@ instance Eq (Entity ks k) where
     Lam e     == Lam e'       = e == e'
     App f e   == App f' e'    = show f == show f' && show e == show e'
     Sgm s e f == Sgm s' e' f' = s == s' && e == e' && f == f'
+    Pr1 e     == Pr1 e'       = show e == show e'
+    Pr2 e     == Pr2 e'       = show e == show e'
     _         == _            = False
 
 instance Show (Scope ks) where
@@ -140,6 +146,8 @@ instance Show (Entity ks k) where
                            show s ++ ") -> " ++ show e ++ ")"
     show (App f e)   = "(" ++ show f ++ " " ++ show e ++ ")"
     show (Sgm _ e f) = "<" ++ show e ++ ", " ++ show f ++ ">"
+    show (Pr1 e)     = show e ++ "_1"
+    show (Pr2 e)     = show e ++ "_2"
 
 class HasScope (a :: [Kind] -> *) where
 
@@ -164,6 +172,8 @@ instance HasScope (Entity k) where
     scope (Lam e)     = tailSC $ scope e
     scope (App f _)   = scope f
     scope (Sgm s _ _) = scope s
+    scope (Pr1 e)     = scope e
+    scope (Pr2 e)     = scope e
 
 class Liftable (a :: [Kind] -> *) where
 
@@ -201,6 +211,8 @@ sig (Lft s e)   = lft s $ sig e
 sig (Lam s)     = LamS (sig s)
 sig (App f e)   = case sig f of LamS s -> substS pE e s
 sig (Sgm s _ _) = s
+sig (Pr1 e)     = firstS $ sig e -- case sig e of SgmS s -> case scope s of Cons t -> t
+sig (Pr2 e)     = case sig e of SgmS s -> substS pE (pr1 e) s
 
 show' :: Entity k ks -> String
 show' e = show e ++ " :: " ++ show (sig e)
@@ -263,7 +275,7 @@ app' f g = let scF = scope f
 app :: Entity ('LAM k k') ks -> Entity k ks -> Entity k' ks
 app f g = fromRight $ app' f g
 
-sgm' :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Either String (Entity ('SGM k k') ks)
+sgm' :: forall k k' ks. Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Either String (Entity ('SGM k k') ks)
 sgm' s e f = let se = sig e
                  t  = firstS s
              in  if se /= t
@@ -274,24 +286,26 @@ sgm' s e f = let se = sig e
                          in if sf /= r
                             then Left  $ show f ++ " has signature " ++ show sf ++
                                          ", but expected " ++ show r
-                            else Right $ Sgm s e f
+                            else Right $ sgm'' s e f
+
+  where
+
+    sgm'' :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Entity ('SGM k k') ks
+    sgm'' s' e'@(Pr1 (Var e'')) f'@(Pr2 (Var f''))
+        | e'' == f'' = Var e''
+        | otherwise = Sgm s' e' f'
+    sgm'' s' e' f' = Sgm s' e' f'
 
 sgm :: Sig ('SGM k k') ks -> Entity k ks -> Entity k' ks -> Entity ('SGM k k') ks
 sgm s e f = fromRight $ sgm' s e f
 
-firstS :: Sig ('SGM k k') ks -> Sig k ks
-firstS (SgmS s) = let sc = scope s in headSC sc
+pr1 :: Entity ('SGM k k') ks -> Entity k ks
+pr1 (Sgm _ e _) = e
+pr1 e           = Pr1 e
 
-secondS :: Sig ('SGM k k') ks -> Sig k' (k ': ks)
-secondS (SgmS s) = s
-
-first :: Entity ('SGM k k') ks -> Entity k ks
-first (Sgm _ e _) = e
-first _           = error "impossible branch"
-
-second :: Entity ('SGM k k') ks -> Entity k' ks
-second (Sgm _ _ f) = f
-second _           = error "impossible branch"
+pr2 :: Entity ('SGM k k') ks -> Entity k' ks
+pr2 (Sgm _ _ f) = f
+pr2 e           = Pr2 e
 
 tailSC :: Scope (k ': ks) -> Scope ks
 tailSC (Cons s) = scope s
@@ -322,6 +336,8 @@ compile (Lft _ e)   (ConsM _ sc) = compile e sc
 compile (App f g)   sc           = compile f sc (compile g sc)
 compile (Lam e)     sc           = \e' -> compile e (ConsM e' sc)
 compile (Sgm _ e f) sc           = (compile e sc, compile f sc)
+compile (Pr1 e)     sc           = fst $ compile e sc
+compile (Pr2 e)     sc           = snd $ compile e sc
 compile _         _              = error "impossible branch"
 
 class SCLiftable (a :: [Kind] -> *) where
@@ -348,6 +364,8 @@ instance SCLiftable (Entity k) where
     scLft sc (Lam e)     = lam (scLft sc e)
     scLft sc (App f g)   = app (scLft sc f) (scLft sc g)
     scLft sc (Sgm s e f) = sgm (scLft sc s) (scLft sc e) (scLft sc f)
+    scLft sc (Pr1 e)     = pr1 (scLft sc e)
+    scLft sc (Pr2 e)     = pr2 (scLft sc e)
 
 class HasKind a where
 
@@ -395,6 +413,8 @@ instance Insertable '[] where
                            = Lam (insert (Proxy :: Proxy '[k]) s e)
     insert _ s (App f e)   = App (insert pE s f) (insert pE s e)
     insert _ s (Sgm t e f) = Sgm (insertS pE s t) (insert pE s e) (insert pE s f)
+    insert _ s (Pr1 e)     = pr1 (insert pE s e)
+    insert _ s (Pr2 e)     = pr2 (insert pE s e)
 
 instance Insertable ls => Insertable (l ': ls) where
 
@@ -415,6 +435,8 @@ instance Insertable ls => Insertable (l ': ls) where
                            = Lam (insert (Proxy :: Proxy (m ': l ': ls)) s e)
     insert p s (App f e)   = App (insert p s f) (insert p s e)
     insert p s (Sgm t e f) = Sgm (insertS p s t) (insert p s e) (insert p s f)
+    insert p s (Pr1 e)     = Pr1 (insert p s e)
+    insert p s (Pr2 e)     = Pr2 (insert p s e)
 
 class Substitutable (ls :: [Kind]) where
 
@@ -445,6 +467,8 @@ instance Substitutable '[] where
                           = lam (subst (Proxy :: Proxy '[k]) e f)
     subst p e (App f g)   = app (subst p e f) (subst p e g)
     subst p e (Sgm s f g) = sgm (substS p e s) (subst p e f) (subst p e g)
+    subst p e (Pr1 f)     = pr1 (subst p e f)
+    subst p e (Pr2 f)     = pr2 (subst p e f)
 
 instance Substitutable ls => Substitutable (l ': ls) where
 
@@ -465,6 +489,14 @@ instance Substitutable ls => Substitutable (l ': ls) where
                           = lam $ subst (Proxy :: Proxy (k ': (l ': ls))) e f
     subst p e (App f g)   = app (subst p e f) (subst p e g)
     subst p e (Sgm s f g) = sgm (substS p e s) (subst p e f) (subst p e g)
+    subst p e (Pr1 f)     = pr1 (subst p e f)
+    subst p e (Pr2 f)     = pr2 (subst p e f)
 
 pE :: Proxy ('[] :: [Kind])
 pE = Proxy
+
+firstS :: Sig ('SGM k k') ks -> Sig k ks
+firstS (SgmS s) = let sc = scope s in headSC sc
+
+secondS :: Sig ('SGM k k') ks -> Sig k' (k ': ks)
+secondS (SgmS s) = s 
