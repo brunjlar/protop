@@ -52,11 +52,7 @@ socEntityWithSig :: Sig -> Socrates Entity
 socEntityWithSig s = scoped
     ("Entity :: " ++ show s ++ " " ++ show (scope s))
     show
-    (choice vars)
-
-  where
-
-    vars = map (show &&& return) $ filter (\v -> sig v == s) $ varsInScope (scope s)
+    (choice $ map (show' &&& return) $ varsWithSig s)
 
 varsInScope :: Scope -> [Entity]
 varsInScope sc = reverse $ f sc where
@@ -64,3 +60,11 @@ varsInScope sc = reverse $ f sc where
     f sc' = case headTail sc' of
                    Nothing       -> []
                    Just (s, sc'') -> var s : map (lft s) (f sc'')
+
+varsWithSig :: Sig -> [Entity]
+varsWithSig s = filter (\v -> sig v == s) $ varsInScope (scope s)
+
+socLambda :: Sig -> [Socrates Entity]
+socLambda s = case kind s of
+   LAM _ _ -> undefined 
+   _       -> []

@@ -27,6 +27,8 @@ module Protop.Logic.Simple
     , sgm
     , Kind(..)
     , HasKind(..)
+    , HasSubst(..)
+    , argBody
     ) where
 
 import           Data.Typeable        (Typeable, eqT, (:~:)(..))
@@ -191,6 +193,31 @@ instance HasKind Entity where
 
     kind e = kind $ sig e
 
+class HasSubst a where
+
+    subst :: Entity -> a -> a
+
+instance HasSubst Sig where
+
+    subst e@(Entity (e' :: I.Entity k ks))
+          s@(Sig    (s' :: I.Sig    l ls))
+        = case (eqT :: Maybe (ls :~: (k ': ks))) of
+            Just Refl -> Sig $ I.substS' e' s'
+            Nothing   -> error $ "can't substitute " ++ show' e ++ " into " ++ show s
+    
+instance HasSubst Entity where
+
+    subst e@(Entity (e' :: I.Entity k ks))
+          f@(Entity (f' :: I.Entity l ls))
+        = case (eqT :: Maybe (ls :~: (k ': ks))) of
+            Just Refl -> Entity $ I.subst' e' f'
+            Nothing   -> error $ "can't substitute " ++ show' e ++ " into " ++ show' f
+
+argBody :: Sig -> Maybe (Sig, Sig)
+argBody s = case kind s of
+    LAM _ _ -> case s of (Sig s') -> Just $ argBody_ s'
+    _       -> Nothing
+
 class Typeable ks => Simple (ks :: [I.Kind]) where
 
     lamS_     :: Simple' k => I.Sig    k ks -> Sig
@@ -229,23 +256,31 @@ instance (Simple ks, Simple' k') => Simple (k' ': ks) where
 
 class Typeable k => Simple' (k :: I.Kind) where
 
-    app_ :: Typeable ks => I.Entity k ks -> Entity -> Entity
+    app_ :: Simple ks => I.Entity k ks -> Entity -> Entity
+
+    argBody_ :: Simple ks => I.Sig k ks -> (Sig, Sig)
 
 instance Simple' 'I.OBJ where
 
     app_ x _ = error $ "can't apply object " ++ I.show' x
 
+    argBody_ s = error $ show s ++ " is no lambda signature"
+
 instance Simple' 'I.MOR where
 
     app_ f _ = error $ "can't apply morphism " ++ I.show' f
+
+    argBody_ s = error $ show s ++ " is no lambda signature"
 
 instance Simple' 'I.PRF where
 
     app_ p _ = error $ "can't apply proof " ++ I.show' p
 
+    argBody_ s = error $ show s ++ " is no lambda signature"
+
 instance (Simple' k, Simple' k') => Simple' ('I.LAM k k') where
 
-    app_ (e :: I.Entity ('I.LAM k k') ks) (Entity (f :: I.Entity l ls))
+    app_ (e :: I.Entity ('LAM k k') ks) (Entity (f :: I.Entity l ls))
         = case (eqT :: Maybe (ks :~: ls), eqT :: Maybe (k :~: l)) of
             (Just Refl, Just Refl) -> Entity $ I.app e f
             (_        , _        ) ->
@@ -253,9 +288,13 @@ instance (Simple' k, Simple' k') => Simple' ('I.LAM k k') where
                         I.show' e ++ " (" ++ show (I.scope e) ++ ") to " ++
                         I.show' f ++ " (" ++ show (I.scope f) ++ ")"
 
+    argBody_ s = case s of I.LamS s' -> (Sig $ I.headSC $ I.scope s', Sig s')
+
 instance (Simple' k, Simple' k') => Simple' ('I.SGM k k') where
 
     app_ e _ = error $ "can't apply sigma entity " ++ I.show' e
+
+    argBody_ s = error $ show s ++ " is no lambda signature"
 
 showSC :: (Show a, HasScope a) => a -> String
 showSC x = show x ++ " (" ++ show (scope x) ++ ")"

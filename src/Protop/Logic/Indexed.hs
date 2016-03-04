@@ -11,7 +11,7 @@ module Protop.Logic.Indexed
     , headSC
     , tailSC
     , lengthSC
-    , Sig
+    , Sig(LamS, SgmS)
     , Entity
     , HasScope(..)
     , Liftable
@@ -39,6 +39,8 @@ module Protop.Logic.Indexed
     , compile
     , SCLiftable(..)
     , HasKind(..)
+    , subst'
+    , substS'
     ) where
 
 import Data.List       (intercalate)
@@ -382,6 +384,22 @@ instance HasKind (Sig k ks) where
 instance HasKind (Entity k ks) where
 
     kind e = kind $ sig e
+
+subst' :: Entity k ks -> Entity k' (k ': ks) -> Entity k' ks
+subst' e f = 
+    case scope f of
+        Cons s ->
+            if sig e == s
+                then subst pE e f
+                else error $ "can't substiture " ++ show e ++ " for signature " ++ show s
+
+substS' :: Entity k ks -> Sig k' (k ': ks) -> Sig k' ks
+substS' e s = 
+    case scope s of
+        Cons t ->
+            if sig e == t
+                then substS pE e s
+                else error $ "can't substiture " ++ show e ++ " for signature " ++ show t
 
 class Insertable (ls :: [Kind]) where
 
