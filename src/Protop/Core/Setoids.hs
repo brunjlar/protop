@@ -1,12 +1,3 @@
-{-# Language TypeFamilies #-}
-{-# Language FlexibleInstances #-}
-{-# Language FlexibleContexts #-}
-{-# Language GADTs #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language ConstraintKinds #-}
-{-# Language StandaloneDeriving #-}
-{-# Language TypeOperators #-}
-
 -- | This module defines /setoids/, which are types with an associated
 -- "explicit equality".
 module Protop.Core.Setoids

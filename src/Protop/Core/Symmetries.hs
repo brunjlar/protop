@@ -1,7 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeFamilies #-}
-
 module Protop.Core.Symmetries
     ( SYMM(..)
     ) where

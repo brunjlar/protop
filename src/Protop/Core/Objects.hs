@@ -1,9 +1,3 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
-
 -- | This module defines /objects/ as instances of the typeclass
 -- 'IsObject'. Basically, an object is just a type with an associated
 -- /setoid/ (i.e. an instance of 'IsSetoid').

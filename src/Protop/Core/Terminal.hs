@@ -1,9 +1,3 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 module Protop.Core.Terminal
     ( T(..)
     , Terminal(..)

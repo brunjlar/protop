@@ -1,8 +1,3 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeOperators #-}
-
 module Protop.Core.Identities
     ( Id(..)
     , IDLEFT(..)

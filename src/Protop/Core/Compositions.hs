@@ -1,9 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ConstraintKinds #-}
-
 module Protop.Core.Compositions
     ( (:.)(..)
     , (:.|)(..)

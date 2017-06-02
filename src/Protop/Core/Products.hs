@@ -1,9 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ConstraintKinds #-}
-
 module Protop.Core.Products
     ( (:*)(..)
     , Pr1(..)

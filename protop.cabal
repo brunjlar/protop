@@ -32,17 +32,10 @@ library
                      , Protop.Core.Symmetries
                      , Protop.Core.Terminal
                      , Protop.Core.Transitivities
-                     , Protop.Logic
-                     , Protop.Logic.Builder
-                     , Protop.Logic.Indexed
-                     , Protop.Logic.Simple
-                     , Protop.Logic.Socrates
-                     , Socrates
-                     , Socrates.IO
-                     , Socrates.Script
-                     , Socrates.Core
+                     , Protop.DSL
+                     , Protop.DSL.Core
                      , Protop.Utility
-  ghc-options:         -Wall
+  ghc-options:         -Wall -O2
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , hspec
@@ -50,6 +43,17 @@ library
                      , operational
                      , transformers
   default-language:    Haskell2010
+  default-extensions:  TypeOperators
+                     , ConstraintKinds
+                     , GADTs
+                     , KindSignatures
+                     , TypeFamilies
+                     , ScopedTypeVariables
+                     , FlexibleContexts
+                     , PolyKinds
+                     , DataKinds
+                     , StandaloneDeriving
+                     , TypeSynonymInstances
 
 test-suite protop-test
   type:                exitcode-stdio-1.0
@@ -60,9 +64,7 @@ test-suite protop-test
                      , protop
   other-modules:       Protop.Core.NaturalSpec
                      , Protop.Core.OmegaSpec
-                     , Protop.Logic.BuilderSpec
-                     , Protop.Logic.IndexedSpec
-  ghc-options:         -Wall -threaded
+  ghc-options:         -Wall -O2 -threaded
   default-language:    Haskell2010
 
 source-repository head

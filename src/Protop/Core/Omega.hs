@@ -1,10 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TypeOperators #-}
-
 module Protop.Core.Omega
     ( OPoint(..)
     , OProof(..)
