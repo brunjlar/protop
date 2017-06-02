@@ -3,3 +3,5 @@ module Protop.DSL
     ) where
 
 import Protop.DSL.Core
+
+import Prelude         hiding ((.))

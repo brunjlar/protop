@@ -33,8 +33,8 @@ library
                      , Protop.Core.Terminal
                      , Protop.Core.Transitivities
                      , Protop.DSL
-                     , Protop.DSL.Core
                      , Protop.Utility
+  other-modules:       Protop.DSL.Core
   ghc-options:         -Wall -O2
   build-depends:       base >= 4.7 && < 5
                      , containers
@@ -64,6 +64,7 @@ test-suite protop-test
                      , protop
   other-modules:       Protop.Core.NaturalSpec
                      , Protop.Core.OmegaSpec
+                     , Protop.DSL.CoreSpec
   ghc-options:         -Wall -O2 -threaded
   default-language:    Haskell2010
 
