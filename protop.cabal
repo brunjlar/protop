@@ -35,8 +35,12 @@ library
                      , Protop.DSL
                      , Protop.Utility
   other-modules:       Protop.DSL.Core
-  ghc-options:         -Wall -O2
+                     , Protop.DSL.Kind
+                     , Protop.DSL.Signature
+                     , Protop.DSL.Expression
+  ghc-options:         -Wall -O2 -Wno-unticked-promoted-constructors
   build-depends:       base >= 4.7 && < 5
+                     , constraints
                      , containers
                      , hspec
                      , mtl
@@ -50,10 +54,15 @@ library
                      , TypeFamilies
                      , ScopedTypeVariables
                      , FlexibleContexts
+                     , FlexibleInstances
                      , PolyKinds
                      , DataKinds
                      , StandaloneDeriving
                      , TypeSynonymInstances
+                     , RankNTypes
+                     , TypeApplications
+                     , MultiParamTypeClasses
+                     , FunctionalDependencies
 
 test-suite protop-test
   type:                exitcode-stdio-1.0
@@ -61,12 +70,15 @@ test-suite protop-test
   main-is:             Spec.hs
   build-depends:       base >= 4.7 && < 5
                      , hspec
+                     , mtl
                      , protop
   other-modules:       Protop.Core.NaturalSpec
                      , Protop.Core.OmegaSpec
                      , Protop.DSL.CoreSpec
   ghc-options:         -Wall -O2 -threaded
   default-language:    Haskell2010
+  default-extensions:  RankNTypes
+                     , FlexibleContexts
 
 source-repository head
   type:     git

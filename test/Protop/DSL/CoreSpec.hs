@@ -1,16 +1,17 @@
 module Protop.DSL.CoreSpec (spec) where
 
-import Protop.DSL
-
-import Prelude    hiding ((.))
+import Control.Monad.Except (MonadError (..))
 import Test.Hspec
+
+import Protop.DSL
 
 spec :: Spec
 spec = do
     sourceSpec
     targetSpec
+    lhsSpec
+    rhsSpec
     prfSpec
-    compSpec
 
 sourceSpec :: Spec
 sourceSpec = describe "source" $
@@ -30,6 +31,28 @@ targetSpec = describe "target" $
             f = Var "f" (Mor x y)
         target f `shouldBe` y 
 
+lhsSpec :: Spec
+lhsSpec = describe "lhs" $
+
+    it "should return the left hand side of a proof" $ do
+        let x = Var "x" Obj
+            y = Var "y" Obj
+            f = Var "f" (Mor x y)
+            g = Var "g" (Mor x y)
+            p = Var "p" $ force $ prf f g
+        lhs p `shouldBe` f 
+
+rhsSpec :: Spec
+rhsSpec = describe "rhs" $
+
+    it "should return the right hand side of a proof" $ do
+        let x = Var "x" Obj
+            y = Var "y" Obj
+            f = Var "f" (Mor x y)
+            g = Var "g" (Mor x y)
+            p = Var "p" $ force $ prf f g
+        rhs p `shouldBe` g 
+
 prfSpec :: Spec
 prfSpec = describe "prf" $ do
 
@@ -37,34 +60,19 @@ prfSpec = describe "prf" $ do
         y = Var "y" Obj
         f = Var "f" (Mor x y)
         g = Var "g" (Mor x y)
+        h = Var "h" (Mor x x)
+        i = Var "i" (Mor y y)
 
     it "should construct a proof signature from two morphisms with equal signature" $ do
         show <$> prf f g `shouldBe` Right "(f == g)"
 
     it "should fail, given morphisms with different sources" $
-        prf f (Id y) `shouldBe` Left (ExpectedEqualObjects x y)
+        prf f i `shouldBe` Left (DistinctSignatures (Mor x y) (Mor y y))
 
     it "should fail, given morphisms with different targets" $
-        prf f (Id x) `shouldBe` Left (ExpectedEqualObjects y x)
+        prf f h `shouldBe` Left (DistinctSignatures (Mor x y) (Mor x x))
 
-compSpec :: Spec
-compSpec = describe "(.)" $ do
-
-    it "should compose composable morphisms" $ do
-        let x = Var "x" Obj
-            y = Var "y" Obj
-            z = Var "z" Obj
-            f = Var "f" (Mor y z)
-            g = Var "g" (Mor x y)
-        show <$> (f . g) `shouldBe` Right "(f . g)"
-
-    it "should fail, given incomposable morphisms" $ do
-        let x = Var "x" Obj
-            y = Var "y" Obj
-            f = Var "f" (Mor x y)
-        (f . f) `shouldBe` Left (ExpectedEqualObjects x y)
-        
-
-force :: Either DSLException a -> a
-force (Right a) = a
-force (Left e)  = error (show e)
+force :: (forall m. MonadError DSLException m => m a) -> a
+force m = case m of
+    Right x -> x
+    Left e  -> error $ show e

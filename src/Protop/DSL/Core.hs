@@ -1,106 +1,49 @@
 module Protop.DSL.Core
     ( Kind (..)
-    , Sig (Obj, Mor)
-    , Exp (Var, Id)
-    , sig
-    , DSLException (..)
+    , SigE (Obj, Mor, Lam, Sgm) 
+    , Sig
+    , Exp (Var, Pr1, Pr2)
     , source
     , target
     , lhs
     , rhs
+    , DSLException (..)
     , prf
-    , (.)
     ) where
 
-import Control.Exception
-import Control.Monad.Except (MonadError (..))
+import           Control.Exception
+import           Control.Monad.Except (MonadError (..))
 
-import Prelude              hiding ((.))
+import Protop.DSL.Expression
+import Protop.DSL.Kind
+import Protop.DSL.Signature
 
-data Kind =
-      OBJ
-    | MOR
-    | PRF
-    deriving (Show, Eq)
+type Sig k = SigE Exp k
 
-data Sig :: Kind -> * where
-    Obj :: Sig 'OBJ
-    Mor :: Exp 'OBJ -> Exp 'OBJ -> Sig 'MOR
-    Prf :: Exp 'MOR -> Exp 'MOR -> Sig 'PRF
+data DSLException where
+    DistinctSignatures :: Sig k -> Sig k -> DSLException
 
-instance Show (Sig k) where
+deriving instance Show DSLException
 
-    show Obj       = "Obj"
-    show (Mor x y) = "(" ++ show x ++ " -> " ++ show y ++ ")"
-    show (Prf f g) = "(" ++ show f ++ " == " ++ show g ++ ")"
+instance Eq DSLException where
 
-instance Eq (Sig k) where
-
-    Obj     == Obj       = True
-    Mor x y == Mor x' y' = x == x' && y == y'
-    Prf f g == Prf f' g' = f == f' && g == g'
-
-data Exp :: Kind -> * where
-    Var  :: String -> Sig k -> Exp k
-    Id   :: Exp 'OBJ -> Exp 'MOR
-    Comp :: Exp 'MOR -> Exp 'MOR -> Exp 'MOR
-
-instance Show (Exp k) where
-
-    show (Var n _)  = n
-    show (Id x)     = "id[" ++ show x ++ "]"
-    show (Comp f g) = "(" ++ show f ++ " . " ++ show g ++ ")"
-
-instance Eq (Exp k) where
-
-    Var n s  == Var n' s'  = n == n' && s == s'
-    Var _ _  == _          = False
-    Id x     == Id x'      = x == x'
-    Id _     == _          = False
-    Comp f g == Comp f' g' = f == f' && g == g'
-    Comp _ _ == _          = False
-
-sig :: Exp k -> Sig k
-sig (Var _ s)  = s
-sig (Id x)     = Mor x x
-sig (Comp f g) =
-    let (Mor x _) = sig g
-        (Mor _ y) = sig f
-    in  Mor x y
-
-data DSLException =
-    ExpectedEqualObjects (Exp 'OBJ) (Exp 'OBJ)
-    deriving (Show, Eq)
+    DistinctSignatures s t == DistinctSignatures s' t' = compareK s s' == EQ && compareK t t' == EQ
 
 instance Exception DSLException
 
-source :: Exp 'MOR -> Exp 'OBJ
+source :: Exp MOR -> Exp OBJ
 source f = case sig f of Mor x _ -> x
 
-target :: Exp 'MOR -> Exp 'OBJ
+target :: Exp MOR -> Exp OBJ
 target f = case sig f of Mor _ x -> x
 
-lhs :: Exp 'PRF -> Exp 'MOR
+lhs :: Exp PRF -> Exp MOR
 lhs p = case sig p of Prf f _ -> f
 
-rhs :: Exp 'PRF -> Exp 'MOR
+rhs :: Exp PRF -> Exp MOR
 rhs p = case sig p of Prf _ f -> f
 
-prf :: MonadError DSLException m => Exp 'MOR -> Exp 'MOR -> m (Sig 'PRF)
-prf f g =
-    let sf = source f
-        sg = source g
-        tf = target f
-        tg = target g
-    in  if sf /= sg then throwError $ ExpectedEqualObjects sf sg
-                    else if tf /= tg then throwError $ ExpectedEqualObjects tf tg
-                                     else return $ Prf f g
-
-infixr 9 .
-
-(.) :: MonadError DSLException m => Exp 'MOR -> Exp 'MOR -> m (Exp 'MOR)
-f . g =
-    let sf = source f
-        tg = target g
-    in  if sf == tg then return $ Comp f g
-                    else throwError $ ExpectedEqualObjects sf tg
+prf :: MonadError DSLException m => Exp MOR -> Exp MOR -> m (Sig PRF)
+prf f g = case compareK (sig f) (sig g) of
+    EQ -> return $ Prf f g
+    _  -> throwError $ DistinctSignatures (sig f) (sig g) 
