@@ -12,6 +12,7 @@ spec = do
     lhsSpec
     rhsSpec
     prfSpec
+    appSpec
 
 sourceSpec :: Spec
 sourceSpec = describe "source" $
@@ -71,6 +72,19 @@ prfSpec = describe "prf" $ do
 
     it "should fail, given morphisms with different targets" $
         prf f h `shouldBe` Left (DistinctSignatures (Mor x y) (Mor x x))
+
+appSpec :: Spec
+appSpec = describe "app" $ do
+
+    let x = Var "x" Obj
+        y = Var "y" Obj
+        e = Lambda "f" (Mor x y) (Var "f" (Mor x y))
+
+    it "should apply a lambda to an argument with the right signature" $
+        show <$> app e (Var "g" (Mor x y)) `shouldBe` Right "((\\f -> f) g)"
+        
+    it "should fail, gien an argument with the wrong signature" $
+        app e (Var "g" (Mor x x)) `shouldBe` Left (DistinctSignatures (Mor x x) (Mor x y))
 
 force :: (forall m. MonadError DSLException m => m a) -> a
 force m = case m of

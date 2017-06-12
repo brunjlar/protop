@@ -2,13 +2,15 @@ module Protop.DSL.Core
     ( Kind (..)
     , SigE (Obj, Mor, Lam, Sgm) 
     , Sig
-    , Exp (Var, Pr1, Pr2)
+    , Exp (Var, Lambda, Pr1, Pr2)
+    , sig
     , source
     , target
     , lhs
     , rhs
     , DSLException (..)
     , prf
+    , app
     ) where
 
 import           Control.Exception
@@ -47,3 +49,9 @@ prf :: MonadError DSLException m => Exp MOR -> Exp MOR -> m (Sig PRF)
 prf f g = case compareK (sig f) (sig g) of
     EQ -> return $ Prf f g
     _  -> throwError $ DistinctSignatures (sig f) (sig g) 
+
+app :: MonadError DSLException m => Exp (LAM k l) -> Exp k -> m (Exp l)
+app e f = case sig e of
+    Lam _ s _
+        | sig f == s -> return $ App e f
+        | otherwise  -> throwError $ DistinctSignatures (sig f) s
