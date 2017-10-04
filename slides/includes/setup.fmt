@@ -1,0 +1,16 @@
+\documentclass{beamer}
+
+\usetheme{metropolis}
+\usepackage[silent]{polytable}
+
+%include polycode.fmt
+%include general.fmt
+%include saverestore.fmt
+%include typewriter.fmt
+%include remember.fmt
+
+\pgfdeclareimage{iohklogo}{iohk_logo_color.pdf}
+
+\subtitle{Haskell eXchange 2017}
+\institute{\pgfuseimage{iohklogo}}
+\author{Dr.~Lars Br\"unjes, IOHK}

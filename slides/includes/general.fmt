@@ -1,0 +1,133 @@
+%if not lhs2tex_general_fmt_read
+%let lhs2tex_general_fmt_read = True
+%include lhs2TeX.fmt
+%include spacing.fmt
+%if style /= newcode
+\ReadOnlyOnce{general.fmt}%
+
+\defbeamertemplate*{code begin}{welltyped theme}
+{
+  \par\vskip\medskipamount%
+  \usebeamerfont{code body}%
+  \begin{beamercolorbox}[colsep*=.75ex,vmode]{code body}%
+    \ifbeamercolorempty[bg]{code body}{\vskip-.25ex}{\vskip-.75ex}\vbox{}%
+}
+\defbeamertemplate*{code end}{default}
+{\end{beamercolorbox}\vskip\smallskipamount}
+
+\newenvironment<>{codeblock}{%
+  \begin{actionenv}#1%
+    \par%
+    \usebeamertemplate{code begin}}
+  {\par%
+    \usebeamertemplate{code end}%
+  \end{actionenv}}
+
+\metroset{block=fill}
+\setbeamercolor{code body}{parent=normal text,use=block title,bg=block title.bg!50!normal text.bg}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Loading standard stuff
+
+%include polycode.fmt
+%include colorcode.fmt
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Proper handling of verbatim
+
+\newcommand\gobble[1]{}
+%subst verbatim a       = "\begingroup\verbsize\begin{codeblock}\tt\gobble'n" a "'n\end{codeblock}\endgroup'n"
+%subst verbnl           = "\leavevmode\\'n\tt\hspace*{0pt}\gobble "
+\newcommand\verbsize{\small}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Proper handling of code
+
+\usepackage{welltypedcode}
+%subst inline a         = "{\usebeamercolor{code body}\colorbox{bg}{\ensuremath{" a "}}}"
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Syntax highlighting for code
+
+%subst keyword a        = "\keyw{" a "}"
+%subst numeral a        = "\con{" a "}"
+%subst string  a        = "\con{\text{\tt \char34 " a "\char34}}"
+%subst char    a        = "\con{\text{\tt ''" a "''}}"
+
+% old colors
+\colorlet{identifier}{blue!45!black}
+\colorlet{constructor}{green!45!black}
+\colorlet{keyword}{red!40!black}
+\colorlet{darkgreen}{green!30!black}
+
+% new colors
+\definecolor{teal}{HTML}{008080}
+\colorlet{type}{teal}
+\colorlet{term}{mLightGreen}
+\colorlet{kind}{mLightBrown}
+\colorlet{keyword}{mLightBrown!70!black}
+%\colorlet{keyword}{yellow!30!red!70!black}
+\colorlet{constr}{mLightGreen!70!black}
+\colorlet{superkind}{black}
+
+\newcommand{\keyw}[1]{{\color{keyword}\textbf{#1}}}
+\newcommand{\ty}[1]{{\color{type}\Conid{#1}}\global\let\lvl\ty}
+\newcommand{\con}[1]{{\color{constr}{\Conid{#1}}}\global\let\lvl\tm}
+\newcommand{\id}[1]{{\color{term}\Varid{#1}}\global\let\lvl\tm}
+\newcommand{\cl}[1]{{\color{type}\Varid{#1}}\global\let\lvl\ty}
+\newcommand{\ki}[1]{{\color{kind}\Varid{#1}}\global\let\lvl\ki}
+\newcommand{\suki}[1]{{\color{superkind}\Varid{#1}}\global\let\lvl\suki}
+\newcommand\prom{\let\con\ty\let\ty\ki}
+\let\tm\Varid
+\let\lvl\tm
+\newcommand{\opsym}[1]{\mathrel{#1}}
+
+%include typewriter.fmt
+%include syntax-prelude.fmt
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Sectioning
+
+%\renewcommand\section[1]{%
+%  \frame[plain]{\begin{center}\color{structure}\large\textbf{#1}\end{center}}}
+\newcommand\wtstylesection[1]{%
+   \begin{frame}[plain]%
+     \begin{beamercolorbox}[wd=\paperwidth, ht=1.1\paperheight, center]{title}%
+     \LARGE #1%
+     \vspace*{.7\paperheight}%
+     \end{beamercolorbox}%
+   \end{frame}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Comments and Pragmas
+
+\newcommand{\graycomments}{%
+\visiblecomments
+\renewcommand\onelinecomment{\quad\color{keyword}-{}- }}
+\graycomments
+
+\def\eqcommentbeginchars{\quad\{\ }%
+\def\eqcommentendchars{\}}%
+\newcommand{\eqcomments}{%
+\visiblecomments
+\let\commentbegin\eqcommentbeginchars
+\let\commentend\eqcommentendchars}
+
+
+%subst pragma a = "\mbox{\pragmabegin " a " \pragmaend}"
+\newcommand\pragmabeginchars{\color{keyword}\ttfamily\{-\#\ }
+\newcommand\pragmaendchars{\#-\}}
+\let\pragmabegin=\pragmabeginchars
+\let\pragmaend=\pragmaendchars
+
+%if style /= newcode
+%format >>> = "\texttt{\color{black!60}GHCi>~}"
+%format === = "\ensuremath{=}"
+%endif
+\newcommand{\userinput}[1]{\texttt{\color{red!50!blue}#1}}
+\newcommand{\useroutput}[1]{\texttt{\color{keyword}#1}}
+
+\EndFmtInput
+%
+%endif
+%endif
