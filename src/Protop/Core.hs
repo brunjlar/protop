@@ -21,6 +21,7 @@ module Protop.Core
     , module Protop.Core.Proofs
     , module Protop.Core.Reflexivities
     , module Protop.Core.Setoids
+    , module Protop.Core.Singleton
     , module Protop.Core.Symmetries
     , module Protop.Core.Transitivities
     , module Protop.Core.Terminal
@@ -39,6 +40,7 @@ import Protop.Core.Products
 import Protop.Core.Proofs
 import Protop.Core.Reflexivities
 import Protop.Core.Setoids
+import Protop.Core.Singleton
 import Protop.Core.Symmetries
 import Protop.Core.Transitivities
 import Protop.Core.Terminal

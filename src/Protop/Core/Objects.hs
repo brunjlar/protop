@@ -6,19 +6,18 @@ module Protop.Core.Objects
     , Object(..)
     ) where
 
-import Data.Function       (on)
-import Data.Proxy          (Proxy(..))
-import Data.Typeable       (Typeable)
+import Data.Function         (on)
+import Data.Typeable         (Typeable)
 import Protop.Core.Setoids
+import Protop.Core.Singleton
 
 class ( Show x
       , Typeable x
       , IsSetoid (Domain x)
+      , Singleton x
       ) => IsObject x where
 
     type Domain x
-
-    proxy :: Proxy x -> x
 
 data Object :: * where
     Object :: IsObject x => x -> Object

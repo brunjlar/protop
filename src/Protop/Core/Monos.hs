@@ -24,6 +24,7 @@ import Protop.Core.Morphisms
 import Protop.Core.Products
 import Protop.Core.Proofs
 import Protop.Core.Setoids
+import Protop.Core.Singleton
 import Protop.Core.Symmetries
 import Protop.Core.Terminal
 import Protop.Core.Transitivities
@@ -70,74 +71,64 @@ data MonoTest :: * -> * where
     MonoTest :: IsMorphism f => f -> MonoTest f
 
 instance Show (MonoTest f) where
-
     show (MonoTest f) = "(MonoTest " ++ show f ++ ")"
 
-instance IsMorphism f => IsObject (MonoTest f) where
+instance IsMorphism f => Singleton (MonoTest f) where
+    singleton = MonoTest singleton
 
+instance IsMorphism f => IsObject (MonoTest f) where
     type Domain (MonoTest f) = MPoint f
 
-    proxy _ = MonoTest (proxy' Proxy)
-
 data MonoTest1 :: * -> * where
-
     MonoTest1 :: IsMorphism f => f -> MonoTest1 f
 
 instance Show (MonoTest1 f) where
-
     show (MonoTest1 f) = "(MonoTest1 " ++ show f ++ ")"
 
-instance IsMorphism f => IsMorphism (MonoTest1 f) where
+instance IsMorphism f => Singleton (MonoTest1 f) where
+    singleton = MonoTest1 singleton
 
+instance IsMorphism f => IsMorphism (MonoTest1 f) where
     type Source (MonoTest1 f) = MonoTest f
     type Target (MonoTest1 f) = Source f
-
     onDomains (MonoTest1 f) = Functoid g g' where
         g (MPoint f' t _ _ _ x) =
             case eqT' f f' of Refl -> t `onPoints` x
         g' (MProof f' t _ _ _ px) =
             case eqT' f f' of Refl -> t `onProofs` px
 
-    proxy' _ = MonoTest1 (proxy' Proxy)
-
 data MonoTest2 :: * -> * where
-
     MonoTest2 :: IsMorphism f => f -> MonoTest2 f
 
 instance Show (MonoTest2 f) where
-
     show (MonoTest2 f) = "(MonoTest2 " ++ show f ++ ")"
 
-instance IsMorphism f => IsMorphism (MonoTest2 f) where
+instance IsMorphism f => Singleton (MonoTest2 f) where
+    singleton = MonoTest2 singleton
 
+instance IsMorphism f => IsMorphism (MonoTest2 f) where
     type Source (MonoTest2 f) = MonoTest f
     type Target (MonoTest2 f) = Source f
-
     onDomains (MonoTest2 f) = Functoid g g' where
         g (MPoint f' _ t' _ _ x) =
             case eqT' f f' of Refl -> t' `onPoints` x
         g' (MProof f' _ t' _ _ px) =
             case eqT' f f' of Refl -> t' `onProofs` px
 
-    proxy' _ = MonoTest2 (proxy' Proxy)
-
 data MONOTEST :: * -> * where
-
     MONOTEST :: IsMorphism f => f -> MONOTEST f
 
 instance Show (MONOTEST f) where
-
     show (MONOTEST f) = "(MONOTEST " ++ show f ++ ")"
 
+instance IsMorphism f => Singleton (MONOTEST f) where
+    singleton = MONOTEST singleton
+
 instance IsMorphism f => IsProof (MONOTEST f) where
-
     type Lhs (MONOTEST f) = f :. MonoTest1 f
-    type Rhs (MONOTEST f) = f :. MonoTest2 f 
-
+    type Rhs (MONOTEST f) = f :. MonoTest2 f
     proof (MONOTEST f) (MPoint f' _ _ p _ x) =
         case eqT' f f' of Refl -> p x
-
-    proxy'' _ = MONOTEST (proxy' Proxy)
 
 type CMONOAPPLY f t t' p p' = ( CMONO f p
                               , IsMorphism t
@@ -151,29 +142,22 @@ type CMONOAPPLY f t t' p p' = ( CMONO f p
                               )
 
 data MONOAPPLY :: * -> * -> * -> * -> * -> * where
-
     MONOAPPLY :: CMONOAPPLY f t t' p p' =>
         f -> t -> t' -> p -> p' -> MONOAPPLY f t t' p p'
 
 instance Show (MONOAPPLY f t t' p p') where
-
     show (MONOAPPLY f t t' p p') =
         "(MONOAPPLY " ++ show f ++ " " ++ show t ++ " " ++
         show t' ++ " " ++ show p ++ " " ++ show p' ++ ")"
 
+instance CMONOAPPLY f t t' p p' => Singleton (MONOAPPLY f t t' p p') where
+    singleton = MONOAPPLY singleton singleton singleton singleton singleton
+
 instance CMONOAPPLY f t t' p p' => IsProof (MONOAPPLY f t t' p p') where
-   
     type Lhs (MONOAPPLY f t t' p p') = t
     type Rhs (MONOAPPLY f t t' p p') = t'
-
     proof (MONOAPPLY f t t' p p') x = proof p $
         MPoint f (onDomains t) (onDomains t') (proof p') Proxy x
-
-    proxy'' _ = MONOAPPLY (proxy' Proxy)
-                          (proxy' Proxy)
-                          (proxy' Proxy)
-                          (proxy'' Proxy)
-                          (proxy'' Proxy)
 
 type CMONO f m = ( IsMorphism f
                  , IsProof m

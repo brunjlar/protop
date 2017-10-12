@@ -14,23 +14,21 @@ module Protop.Core.Morphisms
     , apply
     ) where
 
-import Data.Function       (on)
-import Data.Proxy          (Proxy(..))
-import Data.Typeable       (Typeable, cast)
+import Data.Function         (on)
+import Data.Typeable         (Typeable, cast)
 import Protop.Core.Objects
 import Protop.Core.Setoids
+import Protop.Core.Singleton
 
-class ( Show a 
+class ( Show a
       , Typeable a
       , IsObject (Source a)
       , IsObject (Target a)
+      , Singleton a
       ) => IsMorphism a where
-
     type Source a
     type Target a
-
     onDomains :: a -> Functoid (DSource a) (DTarget a)
-    proxy'    :: Proxy a -> a
 
 type DSource f = Domain (Source f)
 type DTarget f = Domain (Target f)
@@ -56,10 +54,10 @@ onDomains' :: Morphism a b -> Functoid (Domain a) (Domain b)
 onDomains' (Morphism f) = onDomains f
 
 source :: forall a. IsMorphism a => a -> Source a
-source _ = proxy (Proxy :: Proxy (Source a))
+source _ = singleton
 
 target :: forall a. IsMorphism a => a -> Target a
-target _ = proxy (Proxy :: Proxy (Target a))
+target _ = singleton
 
 infixr 1 .$
 
@@ -89,4 +87,4 @@ instance Ord MORPHISM where
 apply :: (IsSetoid a, IsSetoid b) => MORPHISM -> a -> Maybe b
 apply (MORPHISM f) x = do
    x' <- cast x
-   cast $ f .$ x' 
+   cast $ f .$ x'
