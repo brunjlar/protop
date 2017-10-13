@@ -335,13 +335,23 @@ consider the following situation as an example:
     \Omega
 \end{tikzcd}
 \]
-\pause
+\begin{overprint}
+\onslide<1>
 If we can prove that the outer diagram commutes,
 then the red morphism must exist.
 
-\pause
+\onslide<2>
+If we can prove that the outer diagram commutes,
+then the red morphism must exist.
+
 Computationally, this means that our interpreter must be able to
 \alert{compute the predecessor} of $42$ in our model.
+\onslide<3>
+\begin{block}{Note}
+Equalizers are \emph{not} such a big problem - they could be implemented
+by simply ignoring the extra information at runtime.
+\end{block}
+\end{overprint}
 \end{frame}
 
 \begin{frame}{Key idea}
