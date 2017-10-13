@@ -4,6 +4,8 @@
 \usepackage{MnSymbol}
 \usepackage{mathtools}
 
+\usetikzlibrary{decorations.pathmorphing}
+
 \newcommand\cat[1]{\mathcal{#1}}
 \newcommand\catc{\cat{C}}
 \newcommand\catt{\cat{T}}
@@ -33,11 +35,44 @@
 > import Data.Kind     (Type)
 > import Data.Proxy    (Proxy)
 > import Data.Typeable (Typeable)
+>
+> class Singleton a where
+>     singleton :: a
 %endif
 
 \begin{document}
 
 \maketitle
+
+\begin{frame}{IOHK is hiring Haskell Developers!}
+\includegraphics{logo}
+\end{frame}
+
+\begin{frame}{Motivation}
+\begin{itemize}
+    \item
+        Using \emph{dependent types},
+        it is possible to model large parts of mathematics
+        in a computational way.
+    \pause
+    \item
+        However, classical mathematics ist mostly formulated using
+        \alert{set theory}, not type theory.
+    \pause
+    \item
+        Many mathematical constructions use \alert{set comprehension},
+        for example, defining a set as a subset of elements with
+        a specified property.
+    \pause
+    \item
+        It would be nice to be able to model mathematics in a style
+        closer to what mathematicians are used to.
+    \pause
+    \item
+        Many set-theoretic constructions can be done in any
+        \alert{elementary topos}.
+\end{itemize}
+\end{frame}
 
 \section{Elementary Topoi}
 
@@ -352,18 +387,18 @@ and give it computational content.
 \[
 \begin{tikzcd}
     |setLhs p|
-    \ar[loop left, "|reflexivity p|"]
-    \ar[r, bend left, "|p|"]
-    \ar[rr, bend right=50, "|transitivity p q|"'] &
+    \ar[loop left, Rightarrow, "|reflexivity p|"]
+    \ar[r, bend left, Rightarrow, "|p|"]
+    \ar[rr, bend right=50, Rightarrow, "|transitivity p q|"'] &
     |setRhs p=setLhs q|
-    \ar[r, bend left, "|q|"]
-    \ar[l, bend left, "|symmetry p|"] &
+    \ar[r, bend left, Rightarrow, "|q|"]
+    \ar[l, bend left, Rightarrow, "|symmetry p|"] &
     |setRhs q|
 \end{tikzcd}
 \]
 \end{frame}
 
-\begin{frame}{Functoids}
+\begin{frame}[fragile]{Functoids}
 %if style/=newcode
 %format Type = "\ty{Type}"
 %format Functoid = "\ty{Functoid}"
@@ -371,6 +406,7 @@ and give it computational content.
 %format onPoints = "\id{onPoints}"
 %format onProofs = "\id{onProofs}"
 %endif
+\small
 > data Functoid :: Type -> Type -> Type where
 >     Functoid  :: (IsSetoid a, IsSetoid b)
 >               => (a -> b)
@@ -382,22 +418,36 @@ and give it computational content.
 >
 > onProofs :: Functoid a b -> Proofs a -> Proofs b
 > onProofs (Functoid _ g) = g
+\vspace{-5mm}
+\[
+\begin{tikzcd}[column sep=5cm]
+    |x|
+    \ar[r, "|onPoints|"]
+    \ar[d, Rightarrow, "|p|"', ""{name=A}] &
+    |y|
+    \ar[d, Rightarrow, "|q|", ""'{name=B}] \\
+    |x'|
+    \ar[r, "|onPoints|"'] &
+    |y'|
+    \ar[from=A, to=B, red, squiggly, "|onProofs|"]
+\end{tikzcd}
+\]
 \end{frame}
 
 \begin{frame}{Objects}
 %if style/=newcode
+%format Singleton = "\cl{Singleton}"
 %format IsObject = "\cl{IsObject}"
 %format Domain = "\ty{Domain}"
 %format proxy = "\ty{proxy}"
 %endif
-> class ( Show x
->       , Typeable x
->       , IsSetoid (Domain x)
->       ) => IsObject x where
+> class  ( Show x
+>        , Typeable x
+>        , IsSetoid (Domain x)
+>        , Singleton x
+>        ) => IsObject x where
 >
 >     type Domain x
->
->     proxy :: Proxy x -> x
 \end{frame}
 
 \begin{frame}{Morphisms}
@@ -405,26 +455,175 @@ and give it computational content.
 %format IsMorphism = "\cl{IsMorphism}"
 %format Source = "\ty{Source}"
 %format DSource = "\ty{DSource}"
+%format PSource = "\ty{PSource}"
 %format Target = "\ty{Target}"
 %format DTarget = "\ty{DTarget}"
+%format PTarget = "\ty{PTarget}"
 %format onDomains = "\id{onDomains}"
 %format proxy' = "\id{proxy\textquotesingle}"
 %endif
-> class ( Show a
->       , Typeable a
->       , IsObject (Source a)
->       , IsObject (Target a)
->       ) => IsMorphism a where
->
->     type Source a
->     type Target a
->
->     onDomains  :: a
->                -> Functoid (DSource a) (DTarget a)
->     proxy'     :: Proxy a -> a
+\small
+> class  ( Show f
+>        , Typeable f
+>        , IsObject (Source f)
+>        , IsObject (Target f)
+>        , Singleton f
+>        ) => IsMorphism f where
+>     type Source f
+>     type Target f
+>     onDomains :: f -> Functoid (DSource f) (DTarget f)
 >
 > type DSource f = Domain (Source f)
 > type DTarget f = Domain (Target f)
+> type PSource f = Proofs (DSource f)
+> type PTarget f = Proofs (DTarget f)
+\end{frame}
+
+\begin{frame}{Proofs}
+%if style/=newcode
+%format IsProof = "\cl{IsProof}"
+%format Lhs = "\ty{Lhs}"
+%format Rhs = "\ty{Rhs}"
+%format SOURCE = "\ty{SOURCE}"
+%format TARGET = "\ty{TARGET}"
+%format proof = "\id{proof}"
+%format lhs = "\id{lhs}"
+%format rhs = "\id{rhs}"
+%format singleton = "\id{singleton}"
+%endif
+\scriptsize
+> class  ( Show p
+>        , Typeable p
+>        , IsMorphism (Lhs p)
+>        , IsMorphism (Rhs p)
+>        , Source (Lhs p) ~ Source (Rhs p)
+>        , Target (Lhs p) ~ Target (Rhs p)
+>        , Singleton p
+>        ) => IsProof p where
+>     type Lhs p
+>     type Rhs p
+>     proof  :: p
+>            -> Domain (SOURCE p)
+>            -> Proofs (Domain (TARGET p))
+>
+> type SOURCE p  = Source (Lhs p)
+> type TARGET p  = Target (Lhs p)
+>
+> lhs :: IsProof p => p -> Lhs p
+> lhs _ = singleton
+>
+> rhs :: IsProof p => p -> Rhs p
+> rhs _ = singleton
+\end{frame}
+
+\begin{frame}[fragile]{Proofs (cntd.)}
+\tiny
+\[
+\begin{tikzcd}[column sep=40mm]
+    |SOURCE p|
+    \ar[r, bend left=15, "|lhs p|", ""'{name=A}]
+    \ar[r, bend right=15, "|rhs p|"', ""{name=B}]
+    \ar[from=A, to=B, Rightarrow, "|p|"] &
+    |TARGET p| \\ \\ \\ \\
+    &
+    |Domain (TARGET p)| \\ \\
+    |Domain (SOURCE p)|
+    \ar[uur, "|onPoints $ onDomains $ lhs p|"]
+    \ar[r, "|proof p|"]
+    \ar[ddr, "|onPoints $ onDomains $ rhs p|"'] &
+    |Proofs (Domain (TARGET p))|
+    \ar[uu, "|setLhs|"']
+    \ar[dd, "|setRhs|"] \\ \\
+    &
+    |Domain (TARGET p)|
+\end{tikzcd}
+\]
+\end{frame}
+
+\begin{frame}[fragile]{The Omega domain}
+%if style/=newcode
+%format OPoint = "\ty{OPoint}"
+%format OProof = "\ty{OProof}"
+%endif
+\scriptsize
+> data OPoint :: Type where
+>     OPoint :: IsMorphism f => f -> DTarget f -> OPoint
+>
+> data OProof :: Type where
+>     OProof  ::  (IsMorphism f, IsMorphism g)
+>             =>  f -> g -> DTarget f -> DTarget g ->
+>                 ((DSource f, PTarget f) -> (DSource g, PTarget g)) ->
+>                 ((DSource g, PTarget g) -> (DSource f, PTarget f)) ->
+>                 OProof
+\normalsize
+\begin{overprint}
+\onslide<1>
+\[
+  \begin{tikzcd}
+    Y
+    \ar[d, "f"'] & &
+    y
+    \ar[d, mapsto, ""{name=A}] & &
+    y'
+    \ar[d, mapsto, ""'{name=B}]
+    \ar[from=A, to=B, bend left, red]
+    \ar[from=B, to=A, bend left, red] & &
+    Y'
+    \ar[d, "f'"] \\
+    X
+    \ar[r, no head, squiggly] &
+    x &
+    z
+    \ar[l, Rightarrow] & &
+    z'
+    \ar[r, Rightarrow] &
+    x' &
+    X'
+    \ar[l, no head, squiggly]
+  \end{tikzcd}
+\]
+\onslide<2>
+\[
+  \begin{tikzcd}
+    Y
+    \ar[d, "f"'] & &
+    y
+    \ar[d, mapsto, ""{name=A}] & &
+    *
+    \ar[d, mapsto, ""'{name=B}]
+    \ar[from=A, to=B, bend left, red]
+    \ar[from=B, to=A, bend left, red] &
+    \true &
+    *
+    \ar[d, "1_*"] \\
+    X
+    \ar[r, no head, squiggly] &
+    x &
+    z
+    \ar[l, Rightarrow] & &
+    *
+    \ar[r, Leftrightarrow] &
+    * &
+    *
+    \ar[l, no head, squiggly]
+  \end{tikzcd}
+\]
+\end{overprint}
+\end{frame}
+
+\begin{frame}{Lars Br\"unjes}
+%if style /= newcode
+%format @ = \opsym{@}
+%endif
+\includegraphics[width=2cm]{profile}
+\begin{itemize}
+    \item
+        EMail: \texttt{lars.bruenjes@@iohk.io}
+    \item
+        Twitter: \texttt{@@LarsBrunjes}
+    \item
+        GitHub: \texttt{brunjlar}
+\end{itemize}
 \end{frame}
 
 \end{document}
