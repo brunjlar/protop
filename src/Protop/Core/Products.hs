@@ -10,7 +10,6 @@ module Protop.Core.Products
     , diag
     ) where
 
-import Data.Proxy               (Proxy(..))
 import Protop.Core.Compositions
 import Protop.Core.Identities
 import Protop.Core.Morphisms
