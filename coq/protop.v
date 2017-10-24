@@ -41,34 +41,42 @@ with sprf_valid : SPrf -> Prop :=
 
 Definition Object : Set := {x : SObj | sobj_valid x}.
 
-Definition Morphism (x y : Object) : Set := 
-  {f : SMor | smor_valid f /\ proj1_sig x = source f /\ proj1_sig y = target f}.
+Definition obj_in_sobj (x : Object) : SObj := proj1_sig x.
 
-Lemma mor_source {x y : Object} (f : Morphism x y) : source (proj1_sig f) = proj1_sig x.
-  symmetry.
+Coercion obj_in_sobj : Object >-> SObj.
+
+Definition Morphism (x y : Object) : Set := 
+  {f : SMor | smor_valid f /\ source f = x /\ target f = y}.
+
+Definition mor_in_smor {x y : Object} (f : Morphism x y) : SMor := proj1_sig f.
+
+Coercion mor_in_smor : Morphism >-> SMor.
+
+Lemma mor_source {x y : Object} (f : Morphism x y) : source f = x.
   apply (proj2_sig f).
 Qed.
 
-Lemma mor_target {x y : Object} (f : Morphism x y) : target (proj1_sig f) = proj1_sig y.
-  symmetry.
+Lemma mor_target {x y : Object} (f : Morphism x y) : target f = y.
   apply (proj2_sig f).
 Qed.
 
 Definition Proof {x y : Object} (f g : Morphism x y) : Set :=
-  {p : SPrf | sprf_valid p /\ proj1_sig f = lhs p /\ proj1_sig g = rhs p}.
+  {p : SPrf | sprf_valid p /\ lhs p = f /\ rhs p = g}.
 
-Lemma proof_lhs {x y : Object} {f g : Morphism x y} (p : Proof f g) : lhs (proj1_sig p) = proj1_sig f.
-  symmetry.
+Definition proof_in_sprf {x y : Object} {f g : Morphism x y} (p : Proof f g) : SPrf := proj1_sig p.
+
+Coercion proof_in_sprf : Proof >-> SPrf.
+
+Lemma proof_lhs {x y : Object} {f g : Morphism x y} (p : Proof f g) : lhs p = f.
   apply (proj2_sig p).
 Qed.
 
-Lemma proof_rhs {x y : Object} {f g : Morphism x y} (p : Proof f g) : rhs (proj1_sig p) = proj1_sig g.
-  symmetry.
+Lemma proof_rhs {x y : Object} {f g : Morphism x y} (p : Proof f g) : rhs p = g.
   apply (proj2_sig p).
 Qed.
 
 Definition REFL {x y : Object} (f : Morphism x y) : Proof f f.
-  exists (SREFL (proj1_sig f)).
+  exists (SREFL f).
   split.
   apply REFL_valid.
   apply (proj2_sig f).
@@ -76,7 +84,7 @@ Definition REFL {x y : Object} (f : Morphism x y) : Proof f f.
 Defined.
 
 Definition SYMM {x y : Object} {f g : Morphism x y} (p : Proof f g) : Proof g f.
-  exists (SSYMM (proj1_sig p)).
+  exists (SSYMM p).
   split.
   apply SYMM_valid.
   apply (proj2_sig p).
@@ -84,7 +92,7 @@ Definition SYMM {x y : Object} {f g : Morphism x y} (p : Proof f g) : Proof g f.
 Defined.
 
 Definition TRANS {x y : Object} {f g h : Morphism x y} (p : Proof f g) (q : Proof g h) : Proof f h.
-  exists (STRANS (proj1_sig p) (proj1_sig q)).
+  exists (STRANS p q).
   split.
   apply TRANS_valid.
   apply (proj2_sig p).
@@ -94,14 +102,12 @@ Definition TRANS {x y : Object} {f g h : Morphism x y} (p : Proof f g) (q : Proo
   reflexivity.
   split.
   simpl.
-  symmetry.
   apply proof_lhs.
-  symmetry.
   apply proof_rhs.
 Defined.
 
 Definition id (x : Object) : Morphism x x.
-  exists (Sid (proj1_sig x)).
+  exists (Sid x).
   split.
   apply id_valid.
   apply (proj2_sig x).
