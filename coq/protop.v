@@ -39,11 +39,19 @@ with sprf_valid : SPrf -> Prop :=
 | SYMM_valid   : forall p, sprf_valid p -> sprf_valid (SSYMM p)
 | TRANS_valid : forall p q, sprf_valid p -> sprf_valid q -> rhs p = lhs q -> sprf_valid (STRANS p q).
 
+Hint Constructors sobj_valid smor_valid sprf_valid.
+
 Definition Object : Set := {x : SObj | sobj_valid x}.
 
 Definition obj_in_sobj (x : Object) : SObj := proj1_sig x.
 
 Coercion obj_in_sobj : Object >-> SObj.
+
+Lemma obj_valid (x : Object) : sobj_valid x.
+  exact (proj2_sig x).
+Qed.
+
+Hint Extern 0 => apply obj_valid.
 
 Definition Morphism (x y : Object) : Set := 
   {f : SMor | smor_valid f /\ source f = x /\ target f = y}.
@@ -52,12 +60,18 @@ Definition mor_in_smor {x y : Object} (f : Morphism x y) : SMor := proj1_sig f.
 
 Coercion mor_in_smor : Morphism >-> SMor.
 
-Lemma mor_source {x y : Object} (f : Morphism x y) : source f = x.
-  apply (proj2_sig f).
+Lemma mor_valid {x y : Object} (f : Morphism x y) : smor_valid f /\ source f = x /\ target f = y.
+  exact (proj2_sig f).
 Qed.
 
-Lemma mor_target {x y : Object} (f : Morphism x y) : target f = y.
-  apply (proj2_sig f).
+Hint Extern 0 => apply mor_valid.
+
+Lemma mor_source {x y : Object} (f : Morphism x y) : source f = x.
+  auto.
+Qed.
+
+Lemma mor_target {x y : Object} (f : Morphism x y) : target f = x.
+  auto.
 Qed.
 
 Definition Proof {x y : Object} (f g : Morphism x y) : Set :=
@@ -67,55 +81,48 @@ Definition proof_in_sprf {x y : Object} {f g : Morphism x y} (p : Proof f g) : S
 
 Coercion proof_in_sprf : Proof >-> SPrf.
 
+Lemma proof_valid {x y : Object} {f g : Morphism x y} (p : Proof f g) : sprf_valid p /\ lhs p = f /\ rhs p = g.
+  exact (proj2_sig p).
+Qed.
+
+Hint Extern 0 => apply proof_valid.
+
 Lemma proof_lhs {x y : Object} {f g : Morphism x y} (p : Proof f g) : lhs p = f.
-  apply (proj2_sig p).
+  auto.
 Qed.
 
 Lemma proof_rhs {x y : Object} {f g : Morphism x y} (p : Proof f g) : rhs p = g.
-  apply (proj2_sig p).
+  auto.
 Qed.
 
 Definition REFL {x y : Object} (f : Morphism x y) : Proof f f.
   exists (SREFL f).
-  split.
-  apply REFL_valid.
-  apply (proj2_sig f).
   auto.
 Defined.
 
 Definition SYMM {x y : Object} {f g : Morphism x y} (p : Proof f g) : Proof g f.
   exists (SSYMM p).
-  split.
-  apply SYMM_valid.
-  apply (proj2_sig p).
-  split; apply (proj2_sig p).
+  auto.
 Defined.
 
 Definition TRANS {x y : Object} {f g h : Morphism x y} (p : Proof f g) (q : Proof g h) : Proof f h.
   exists (STRANS p q).
+  auto.
   split.
-  apply TRANS_valid.
-  apply (proj2_sig p).
-  apply (proj2_sig q).
-  rewrite proof_rhs.
-  rewrite proof_lhs.
+  apply TRANS_valid; auto.
+  rewrite (proof_rhs p).
+  rewrite (proof_lhs q).
   reflexivity.
-  split.
-  simpl.
-  apply proof_lhs.
-  apply proof_rhs.
+  auto.
 Defined.
 
 Definition id (x : Object) : Morphism x x.
   exists (Sid x).
-  split.
-  apply id_valid.
-  apply (proj2_sig x).
-  split; simpl; reflexivity.
+  auto.
 Defined.
 
 Definition T : Object.
   exists ST.
-  exact T_valid.
+  auto.
 Defined.
 
