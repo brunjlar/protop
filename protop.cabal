@@ -32,15 +32,6 @@ library
                      , Protop.Core.Symmetries
                      , Protop.Core.Terminal
                      , Protop.Core.Transitivities
-                     , Protop.Logic
-                     , Protop.Logic.Builder
-                     , Protop.Logic.Indexed
-                     , Protop.Logic.Simple
-                     , Protop.Logic.Socrates
-                     , Socrates
-                     , Socrates.IO
-                     , Socrates.Script
-                     , Socrates.Core
                      , Protop.Utility
   ghc-options:         -Wall
   build-depends:       base >= 4.7 && < 5
@@ -60,8 +51,6 @@ test-suite protop-test
                      , protop
   other-modules:       Protop.Core.NaturalSpec
                      , Protop.Core.OmegaSpec
-                     , Protop.Logic.BuilderSpec
-                     , Protop.Logic.IndexedSpec
   ghc-options:         -Wall -threaded
   default-language:    Haskell2010
 
