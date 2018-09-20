@@ -1,0 +1,20 @@
+\usepackage{tikz}
+\usetikzlibrary{fit,shapes,backgrounds}
+
+% Remembers a piece of text, code.
+\newcommand\Remember[2]{%
+  \begin{tikzpicture}[baseline=(#1.base),remember picture]%
+    \node[inner sep=0pt] (#1) {\ensuremath{#2}};
+  \end{tikzpicture}}
+
+% Draws a frame around a number of remembered coordinates.
+\newcommand\NoHighlight{%
+  \smash{\makebox[0pt]{%
+  \begin{tikzpicture}[overlay,remember picture]%
+  \end{tikzpicture}}}}
+\newcommand\Highlight[1]{%
+  \smash{\makebox[0pt]{%
+  \begin{tikzpicture}[overlay,remember picture]%
+    \node [rectangle,draw=alert,nearly opaque,ultra thick,inner sep=0.5mm,fit=#1] {};
+  \end{tikzpicture}}}}
+

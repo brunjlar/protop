@@ -1,0 +1,110 @@
+%if not lhs2tex_welltyped_fmt_read
+%let lhs2tex_welltyped_fmt_read = True
+%include lhs2TeX.fmt
+%include spacing.fmt
+%if style /= newcode
+\ReadOnlyOnce{welltyped.fmt}%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Proper font setup
+
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[scaled=1.1]{inconsolata}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer package setup
+
+% If skillsmatter is set, we include their logo.
+%if skillsmatter
+\usetheme[skillsmatter]{welltyped}
+%else
+\usetheme{welltyped}
+%endif
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Loading standard stuff
+
+%include polycode.fmt
+%include colorcode.fmt
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Proper handling of verbatim
+
+\newcommand\gobble[1]{}
+%subst verbatim a       = "\begingroup\small\begin{codeblock}\tt\gobble'n" a "'n\end{codeblock}\endgroup'n"
+%subst verbnl           = "\\'n\tt\gobble "
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Proper handling of code
+
+\usepackage{welltypedcode}
+%subst inline a         = "\colorbox{welltypedcode}{\ensuremath{" a "}}"
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Syntax highlighting for code
+
+\let\Varid=\mathsf
+\let\Conid=\mathsf
+
+%subst keyword a        = "\keyw{" a "}"
+%subst numeral a        = "\con{" a "}"
+%subst string  a        = "\con{\text{\tt \char34 " a "\char34}}"
+%subst char    a        = "\con{\text{\tt ''" a "''}}"
+
+% old colors
+\colorlet{identifier}{welltypedblue!45!black}
+\colorlet{constructor}{green!45!black}
+\colorlet{keyword}{red!40!black}
+\colorlet{darkgreen}{green!30!black}
+
+% new colors
+\colorlet{type}{welltypedblue!45!black}
+\colorlet{term}{green!45!black}
+\colorlet{kind}{red!65!black}
+\colorlet{keyword}{red!40!black}
+%\colorlet{keyword}{yellow!30!red!70!black}
+\colorlet{constr}{green!37!black}
+\colorlet{superkind}{black}
+
+\newcommand{\keyw}[1]{{\color{keyword}\textbf{#1}}}
+\newcommand{\ty}[1]{{\color{type}\Conid{#1}}\global\let\lvl\ty}
+\newcommand{\con}[1]{{\color{constr}{\Conid{#1}}}\global\let\lvl\tm}
+\newcommand{\id}[1]{{\color{term}\Varid{#1}}\global\let\lvl\tm}
+\newcommand{\cl}[1]{{\color{type}\Varid{#1}}\global\let\lvl\ty}
+\newcommand{\ki}[1]{{\color{kind}\Varid{#1}}\global\let\lvl\ki}
+\newcommand{\suki}[1]{{\color{superkind}\Varid{#1}}\global\let\lvl\suki}
+\newcommand\prom{\let\con\ty\let\ty\ki}
+\let\tm\Varid
+\let\lvl\tm
+\newcommand{\opsym}[1]{\mathrel{#1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Sectioning
+
+%\renewcommand\section[1]{%
+%  \frame[plain]{\begin{center}\color{structure}\large\textbf{#1}\end{center}}}
+\renewcommand\section[1]{%
+   \begin{frame}[plain]%
+     \begin{beamercolorbox}[wd=\paperwidth, ht=1.1\paperheight, center]{title}%
+     \LARGE #1%
+     \vspace*{.7\paperheight}%
+     \end{beamercolorbox}%
+   \end{frame}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Comments and Pragmas
+
+\newcommand{\graycomments}{%
+\visiblecomments
+\renewcommand\onelinecomment{\quad\color{keyword}-{}- }}
+\graycomments
+
+%subst pragma a = "\mbox{\pragmabegin " a " \pragmaend}"
+\newcommand\pragmabeginchars{\color{keyword}\{-\#\ }
+\newcommand\pragmaendchars{\#-\}}
+\let\pragmabegin=\pragmabeginchars
+\let\pragmaend=\pragmaendchars
+
+\EndFmtInput
+%
+%endif
+%endif
